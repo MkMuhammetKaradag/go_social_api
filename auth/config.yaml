@@ -11,3 +11,7 @@ database:
   user: 'myuser'
   password: 'mypassword'
   db: 'auth'
+redis:
+  connString: 'localhost:6379'
+  password: ''
+  db: 0
