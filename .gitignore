@@ -1,0 +1,29 @@
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.test
+*.out
+
+# Dependency directories (modules or vendor)
+/vendor/
+go.mod
+go.sum
+
+# IDE specific files
+.idea/
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.swp
+*.swo
+
+# Coverage files
+*.cov
+
+# CGO files
+_cgo_*
