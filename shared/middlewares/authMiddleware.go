@@ -21,18 +21,9 @@ func NewAuthMiddleware(redisRepo RedisRepository) *AuthMiddleware {
 
 func (m *AuthMiddleware) Authenticate() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		publicRoutes := map[string]bool{
-			"/register": true,
-			"/login":    true,
-		}
-
-		if publicRoutes[c.Path()] {
-			return c.Next()
-		}
 
 		var token string
 
-		// WebSocket kontrolü
 		if strings.Contains(c.Get("Connection"), "Upgrade") && c.Get("Upgrade") == "websocket" {
 			token = c.Query("token")
 			if token == "" {
@@ -45,21 +36,18 @@ func (m *AuthMiddleware) Authenticate() fiber.Handler {
 			}
 			token = cookieSessionId
 		}
-		// fmt.Println("token:", token)
 
 		userData, err := m.sessionRepo.GetSession(c.UserContext(), token)
 		if err != nil {
 			return respondWithError(c, fiber.StatusUnauthorized, "missing session")
 		}
 
-		// Context'e userData ekleme (Fiber'de Locals kullanılır)
 		c.Locals("userData", userData)
 
 		return c.Next()
 	}
 }
 
-// Kullanıcı verisini almak için yardımcı fonksiyon
 func GetUserData(c *fiber.Ctx) (map[string]string, bool) {
 	userData, ok := c.Locals("userData").(map[string]string)
 	return userData, ok

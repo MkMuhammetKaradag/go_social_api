@@ -2,7 +2,11 @@ package auth
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"socialmedia/auth/domain"
+	"socialmedia/shared/messaging"
+	"time"
 )
 
 type SignUpAuthRequest struct {
@@ -23,12 +27,23 @@ type SignUpAuthResponse struct {
 
 type SignUpAuthHandler struct {
 	repository Repository
+	rabbitMQ   RabbitMQ
 }
 
-func NewSignUpAuthHandler(repository Repository) *SignUpAuthHandler {
+var r = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func NewSignUpAuthHandler(repository Repository, rabbitMQ RabbitMQ) *SignUpAuthHandler {
 	return &SignUpAuthHandler{
 		repository: repository,
+		rabbitMQ:   rabbitMQ,
 	}
+}
+func GenerateActivationCode() string {
+
+	num := r.Intn(10000)
+
+	return fmt.Sprintf("%04d", num)
+
 }
 
 func (h *SignUpAuthHandler) Handle(ctx context.Context, req *SignUpAuthRequest) (*SignUpAuthResponse, error) {
@@ -43,6 +58,28 @@ func (h *SignUpAuthHandler) Handle(ctx context.Context, req *SignUpAuthRequest) 
 	err := h.repository.SignUp(ctx, auth)
 	if err != nil {
 		return nil, err
+	}
+	activationCode := GenerateActivationCode()
+	payload := map[string]interface{}{
+		"activationCode": activationCode,
+		"user":           req,
+	}
+	fmt.Println(payload)
+
+	emailMessage := messaging.Message{
+		Type:      "active_user",
+		ToService: messaging.EmailService,
+		Data: map[string]interface{}{
+			"email":           req.Email,
+			"activation_code": activationCode,
+			"template_name":   "activation_email.html",
+			"userName":        req.Username,
+		},
+	}
+
+	if err := h.rabbitMQ.PublishMessage(context.Background(), emailMessage); err != nil {
+
+		return nil, fmt.Errorf("Aktivasyon e-postası gönderilemedi")
 	}
 
 	return &SignUpAuthResponse{Message: "User Created"}, nil

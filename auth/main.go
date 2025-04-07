@@ -11,6 +11,7 @@ import (
 	"socialmedia/auth/internal/server"
 	"socialmedia/auth/pkg/config"
 	"socialmedia/auth/pkg/graceful"
+	"socialmedia/shared/messaging"
 	"socialmedia/shared/middlewares"
 	"time"
 
@@ -37,7 +38,13 @@ func main() {
 		log.Fatalf("Redis connection failed: %v", err)
 	}
 
-	signUpAuthHandler := auth.NewSignUpAuthHandler(repo)
+	rabbitMQ, err := initRabbitMQ()
+	if err != nil {
+		log.Fatalf("Redis connection failed: %v", err)
+	}
+	defer rabbitMQ.Close()
+
+	signUpAuthHandler := auth.NewSignUpAuthHandler(repo, rabbitMQ)
 	signInAuthHandler := auth.NewSignInAuthHandler(repo, redisRepo)
 	logoutAuthHandler := auth.NewLogoutAuthHandler(redisRepo)
 
@@ -58,14 +65,12 @@ func main() {
 
 	app.Post("/signup", handler.HandleBasic[auth.SignUpAuthRequest, auth.SignUpAuthResponse](signUpAuthHandler))
 	app.Post("/signin", handler.HandleWithFiber[auth.SignInAuthRequest, auth.SignInAuthResponse](signInAuthHandler))
-	app.Post("/logout", authMiddleware.Authenticate(), handler.HandleWithFiber[auth.LogoutAuthRequest, auth.LogoutAuthResponse](logoutAuthHandler))
-	app.Get("/profile", authMiddleware.Authenticate(), func(c *fiber.Ctx) error {
-		userData, ok := middlewares.GetUserData(c)
-		if !ok {
-			return c.Status(fiber.StatusUnauthorized).SendString("Kullanıcı bilgisi bulunamadı")
-		}
-		return c.JSON(userData)
-	})
+	protected := app.Group("/", authMiddleware.Authenticate())
+	{
+		protected.Get("/profile", profileHandler)
+		protected.Post("/logout", handler.HandleWithFiber[auth.LogoutAuthRequest, auth.LogoutAuthResponse](logoutAuthHandler))
+
+	}
 
 	go func() {
 		if err := server.Start(app, appConfig.Server.Port); err != nil {
@@ -77,4 +82,25 @@ func main() {
 	zap.L().Info("Server started on port", zap.String("port", appConfig.Server.Port))
 
 	graceful.WaitForShutdown(app, 5*time.Second)
+}
+
+func profileHandler(c *fiber.Ctx) error {
+	userData, ok := middlewares.GetUserData(c)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).SendString("Kullanıcı bilgisi bulunamadı")
+	}
+	return c.JSON(userData)
+}
+
+func initRabbitMQ() (*messaging.RabbitMQ, error) {
+	config := messaging.NewDefaultConfig()
+	config.RetryTypes = []string{"user_created"}
+
+	rabbitMQ, err := messaging.NewRabbitMQ(config, messaging.AuthService)
+	if err != nil {
+		log.Printf("RabbitMQ bağlantısı kurulamadı: %v", err)
+		return nil, err
+	}
+
+	return rabbitMQ, nil
 }

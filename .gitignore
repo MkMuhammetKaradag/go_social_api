@@ -4,6 +4,8 @@
 *.dll
 *.test
 *.out
+*.env
+*tstrbtmq.txt
 
 # Dependency directories (modules or vendor)
 /vendor/
