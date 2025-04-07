@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"fmt"
 	"socialmedia/auth/domain"
 	"strconv"
 	"time"
@@ -42,7 +41,7 @@ func (h *SignInAuthHandler) Handle(fbrCtx *fiber.Ctx, ctx context.Context, req *
 	device := fbrCtx.Get("User-Agent")
 	ip := fbrCtx.IP()
 
-	fmt.Println(device, ip)
+	// fmt.Println(device, ip)
 	userData := map[string]string{
 		"id":       strconv.Itoa(int(auth.ID)),
 		"email":    auth.Email,

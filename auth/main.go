@@ -11,6 +11,7 @@ import (
 	"socialmedia/auth/internal/server"
 	"socialmedia/auth/pkg/config"
 	"socialmedia/auth/pkg/graceful"
+	"socialmedia/shared/middlewares"
 	"time"
 
 	_ "socialmedia/auth/pkg/log"
@@ -20,12 +21,11 @@ import (
 )
 
 func main() {
-	
+
 	appConfig := config.Read()
 	defer zap.L().Sync()
 
 	zap.L().Info("app starting...", zap.String("app name", appConfig.App.Name))
-
 
 	repo, err := postgres.NewPgRepository("postgres://myuser:mypassword@localhost:5432/auth?sslmode=disable")
 	if err != nil {
@@ -37,11 +37,10 @@ func main() {
 		log.Fatalf("Redis connection failed: %v", err)
 	}
 
-	
 	signUpAuthHandler := auth.NewSignUpAuthHandler(repo)
 	signInAuthHandler := auth.NewSignInAuthHandler(repo, redisRepo)
+	logoutAuthHandler := auth.NewLogoutAuthHandler(redisRepo)
 
-	
 	serverConfig := server.Config{
 		Port:         appConfig.Server.Port,
 		IdleTimeout:  5 * time.Second,
@@ -49,17 +48,24 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	
 	app := server.NewFiberApp(serverConfig)
 
-	
+	authMiddleware := middlewares.NewAuthMiddleware(redisRepo)
+	// app.Use(authMiddleware.Authenticate())
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
 
 	app.Post("/signup", handler.HandleBasic[auth.SignUpAuthRequest, auth.SignUpAuthResponse](signUpAuthHandler))
 	app.Post("/signin", handler.HandleWithFiber[auth.SignInAuthRequest, auth.SignInAuthResponse](signInAuthHandler))
-
+	app.Post("/logout", authMiddleware.Authenticate(), handler.HandleWithFiber[auth.LogoutAuthRequest, auth.LogoutAuthResponse](logoutAuthHandler))
+	app.Get("/profile", authMiddleware.Authenticate(), func(c *fiber.Ctx) error {
+		userData, ok := middlewares.GetUserData(c)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).SendString("Kullanıcı bilgisi bulunamadı")
+		}
+		return c.JSON(userData)
+	})
 
 	go func() {
 		if err := server.Start(app, appConfig.Server.Port); err != nil {
@@ -70,6 +76,5 @@ func main() {
 
 	zap.L().Info("Server started on port", zap.String("port", appConfig.Server.Port))
 
-	
 	graceful.WaitForShutdown(app, 5*time.Second)
 }

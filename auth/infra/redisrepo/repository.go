@@ -49,8 +49,13 @@ func (r *RedisRepository) GetSession(ctx context.Context, key string) (map[strin
 	return userData, nil
 }
 
-func (r *RedisRepository) DeleteSession(ctx context.Context, key string) error {
-	return r.Client.Del(ctx, key).Err()
+func (r *RedisRepository) DeleteSession(ctx context.Context, key string, userID string) error {
+
+	err := r.Client.Del(ctx, key).Err()
+	if err != nil {
+		return err
+	}
+	return r.Client.SRem(ctx, "user_sessions:"+userID, key).Err()
 }
 
 // func (r *RedisRepository) PublishStatus(ctx context.Context, userID string, status string) error {
