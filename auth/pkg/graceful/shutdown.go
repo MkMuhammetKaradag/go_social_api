@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// WaitForShutdown uygulama kapatma sinyallerini bekler
+
 func WaitForShutdown(app *fiber.App, timeout time.Duration) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)

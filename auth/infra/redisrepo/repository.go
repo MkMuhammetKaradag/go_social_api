@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -26,11 +27,12 @@ func NewRedisRepository(connString, password string, db int) (*RedisRepository, 
 	return &RedisRepository{Client: RedisClient}, nil
 }
 
-func (r *RedisRepository) SetSession(ctx context.Context, key string, userData map[string]string, expiration time.Duration) error {
+func (r *RedisRepository) SetSession(ctx context.Context, key string, userId string, userData map[string]string, expiration time.Duration) error {
 	jsonData, err := json.Marshal(userData)
 	if err != nil {
 		return err
 	}
+	r.Client.SAdd(ctx, "user_sessions:"+userId, key)
 	return r.Client.Set(ctx, key, jsonData, expiration).Err()
 }
 

@@ -20,13 +20,13 @@ import (
 )
 
 func main() {
-	// Konfigürasyon yükleme
+	
 	appConfig := config.Read()
 	defer zap.L().Sync()
 
 	zap.L().Info("app starting...", zap.String("app name", appConfig.App.Name))
 
-	// Veritabanı bağlantıları
+
 	repo, err := postgres.NewPgRepository("postgres://myuser:mypassword@localhost:5432/auth?sslmode=disable")
 	if err != nil {
 		log.Fatalf("Database connection failed: %v", err)
@@ -37,11 +37,11 @@ func main() {
 		log.Fatalf("Redis connection failed: %v", err)
 	}
 
-	// Handler'ları oluştur
+	
 	signUpAuthHandler := auth.NewSignUpAuthHandler(repo)
 	signInAuthHandler := auth.NewSignInAuthHandler(repo, redisRepo)
 
-	// Server konfigürasyonu
+	
 	serverConfig := server.Config{
 		Port:         appConfig.Server.Port,
 		IdleTimeout:  5 * time.Second,
@@ -49,10 +49,10 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	// Fiber app oluştur
+	
 	app := server.NewFiberApp(serverConfig)
 
-	// Rotaları tanımla
+	
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
@@ -60,7 +60,7 @@ func main() {
 	app.Post("/signup", handler.HandleBasic[auth.SignUpAuthRequest, auth.SignUpAuthResponse](signUpAuthHandler))
 	app.Post("/signin", handler.HandleWithFiber[auth.SignInAuthRequest, auth.SignInAuthResponse](signInAuthHandler))
 
-	// Server'ı başlat
+
 	go func() {
 		if err := server.Start(app, appConfig.Server.Port); err != nil {
 			zap.L().Error("Failed to start server", zap.Error(err))
@@ -70,6 +70,6 @@ func main() {
 
 	zap.L().Info("Server started on port", zap.String("port", appConfig.Server.Port))
 
-	// Graceful shutdown için bekle
+	
 	graceful.WaitForShutdown(app, 5*time.Second)
 }

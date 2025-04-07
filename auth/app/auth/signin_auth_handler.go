@@ -2,11 +2,13 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"socialmedia/auth/domain"
 	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 type SignInAuthRequest struct {
@@ -35,20 +37,25 @@ func (h *SignInAuthHandler) Handle(fbrCtx *fiber.Ctx, ctx context.Context, req *
 	if err != nil {
 		return nil, err
 	}
-	sessionKey := "session:" + strconv.Itoa(int(auth.ID))
+	sessionKey := strconv.Itoa(int(auth.ID))
+	sessionID := uuid.New().String()
+	device := fbrCtx.Get("User-Agent")
+	ip := fbrCtx.IP()
+
+	fmt.Println(device, ip)
 	userData := map[string]string{
 		"id":       strconv.Itoa(int(auth.ID)),
 		"email":    auth.Email,
+		"device":   device,
+		"ip":       ip,
 		"username": auth.Username,
 	}
-
-	// ctx := context.Background()
-	if err := h.sessionRepo.SetSession(ctx, sessionKey, userData, 24*time.Hour); err != nil {
+	if err := h.sessionRepo.SetSession(ctx, sessionID, sessionKey, userData, 24*time.Hour); err != nil {
 		return nil, err
 	}
 	fbrCtx.Cookie(&fiber.Cookie{
 		Name:     "session_id",
-		Value:    sessionKey,
+		Value:    sessionID,
 		Path:     "/",
 		MaxAge:   60 * 60 * 24, // 1 gün
 		HTTPOnly: true,

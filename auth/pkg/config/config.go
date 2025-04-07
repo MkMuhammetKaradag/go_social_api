@@ -30,16 +30,16 @@ type DatabaseConfig struct {
 }
 
 func Read() *Config {
-	viper.SetConfigName("config") // Yapılandırma dosyasının adı
-	viper.SetConfigType("yaml")   // Yapılandırma dosyasının türü
-	viper.AddConfigPath(".")      // Yapılandırma dosyasının bulunduğu dizin
+	viper.SetConfigName("config") 
+	viper.SetConfigType("yaml")   
+	viper.AddConfigPath(".")     
 
-	// Yapılandırma dosyasını oku
+
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalf("Yapılandırma dosyası okunamadı: %v", err)
 	}
 
-	// Yapılandırmayı bir struct'a yerleştir
+
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		log.Fatalf("Yapılandırma çözümlenemedi: %v", err)
