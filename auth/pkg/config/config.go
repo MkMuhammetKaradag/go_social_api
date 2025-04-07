@@ -10,6 +10,7 @@ type Config struct {
 	App      AppConfig      `mapstructure:"app"`
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
+	Redis    RedisConfig    `mapstructure:"redis"`
 }
 
 type AppConfig struct {
@@ -23,22 +24,28 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Port     string `mapstructure:"port"`
+	Port string `mapstructure:"port"`
+	Host string `mapstructure:"host"`
+
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	DB       string `mapstructure:"db"`
 }
 
-func Read() *Config {
-	viper.SetConfigName("config") 
-	viper.SetConfigType("yaml")   
-	viper.AddConfigPath(".")     
+type RedisConfig struct {
+	RedisURL string `mapstructure:"redisURL"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
+}
 
+func Read() *Config {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
 
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalf("Yapılandırma dosyası okunamadı: %v", err)
 	}
-
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {

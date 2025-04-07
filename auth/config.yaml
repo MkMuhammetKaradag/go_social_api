@@ -11,7 +11,9 @@ database:
   user: 'myuser'
   password: 'mypassword'
   db: 'auth'
+  host: 'localhost'
+
 redis:
-  connString: 'localhost:6379'
+  redisURL: 'localhost:6379'
   password: ''
   db: 0

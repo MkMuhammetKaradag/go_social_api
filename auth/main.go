@@ -2,16 +2,13 @@
 package main
 
 import (
-	"log"
 	"os"
 	"socialmedia/auth/app/auth"
-	"socialmedia/auth/infra/postgres"
-	"socialmedia/auth/infra/redisrepo"
 	"socialmedia/auth/internal/handler"
+	"socialmedia/auth/internal/initializer"
 	"socialmedia/auth/internal/server"
 	"socialmedia/auth/pkg/config"
 	"socialmedia/auth/pkg/graceful"
-	"socialmedia/shared/messaging"
 	"socialmedia/shared/middlewares"
 	"time"
 
@@ -28,20 +25,19 @@ func main() {
 
 	zap.L().Info("app starting...", zap.String("app name", appConfig.App.Name))
 
-	repo, err := postgres.NewPgRepository("postgres://myuser:mypassword@localhost:5432/auth?sslmode=disable")
-	if err != nil {
-		log.Fatalf("Database connection failed: %v", err)
-	}
+	// repo, err := postgres.NewPgRepository("postgres://myuser:mypassword@localhost:5432/auth?sslmode=disable")
+	// if err != nil {
+	// 	log.Fatalf("Database connection failed: %v", err)
+	// }
+	repo := initializer.InitDatabase(appConfig)
+	redisRepo := initializer.InitRedis(appConfig)
+	// redisRepo, err := redisrepo.NewRedisRepository("localhost:6379", "", 0)
+	// if err != nil {
+	// 	log.Fatalf("Redis connection failed: %v", err)
+	// }
 
-	redisRepo, err := redisrepo.NewRedisRepository("localhost:6379", "", 0)
-	if err != nil {
-		log.Fatalf("Redis connection failed: %v", err)
-	}
+	rabbitMQ := initializer.InitMessaging()
 
-	rabbitMQ, err := initRabbitMQ()
-	if err != nil {
-		log.Fatalf("Redis connection failed: %v", err)
-	}
 	defer rabbitMQ.Close()
 
 	signUpAuthHandler := auth.NewSignUpAuthHandler(repo, rabbitMQ)
@@ -90,17 +86,4 @@ func profileHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).SendString("Kullanıcı bilgisi bulunamadı")
 	}
 	return c.JSON(userData)
-}
-
-func initRabbitMQ() (*messaging.RabbitMQ, error) {
-	config := messaging.NewDefaultConfig()
-	config.RetryTypes = []string{"user_created"}
-
-	rabbitMQ, err := messaging.NewRabbitMQ(config, messaging.AuthService)
-	if err != nil {
-		log.Printf("RabbitMQ bağlantısı kurulamadı: %v", err)
-		return nil, err
-	}
-
-	return rabbitMQ, nil
 }
