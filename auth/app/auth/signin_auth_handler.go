@@ -16,7 +16,7 @@ type SignInAuthRequest struct {
 }
 
 type SignInAuthResponse struct {
-	Auth *domain.Auth `json:"auth"`
+	Auth *domain.AuthResponse `json:"auth"`
 }
 
 type SignInAuthHandler struct {
@@ -61,5 +61,10 @@ func (h *SignInAuthHandler) Handle(fbrCtx *fiber.Ctx, ctx context.Context, req *
 		Secure:   false, // HTTPS kullanıyorsan true yap
 		SameSite: "Lax",
 	})
-	return &SignInAuthResponse{Auth: auth}, nil
+	response := &domain.AuthResponse{
+		ID:       auth.ID,
+		Username: auth.Username,
+		Email:    auth.Email,
+	}
+	return &SignInAuthResponse{Auth: response}, nil
 }

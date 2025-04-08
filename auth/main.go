@@ -19,28 +19,19 @@ import (
 )
 
 func main() {
-
 	appConfig := config.Read()
 	defer zap.L().Sync()
-
 	zap.L().Info("app starting...", zap.String("app name", appConfig.App.Name))
 
-	// repo, err := postgres.NewPgRepository("postgres://myuser:mypassword@localhost:5432/auth?sslmode=disable")
-	// if err != nil {
-	// 	log.Fatalf("Database connection failed: %v", err)
-	// }
 	repo := initializer.InitDatabase(appConfig)
 	redisRepo := initializer.InitRedis(appConfig)
-	// redisRepo, err := redisrepo.NewRedisRepository("localhost:6379", "", 0)
-	// if err != nil {
-	// 	log.Fatalf("Redis connection failed: %v", err)
-	// }
-
 	rabbitMQ := initializer.InitMessaging()
+	jwtHelper := initializer.InitJwtHelper(appConfig)
 
 	defer rabbitMQ.Close()
 
-	signUpAuthHandler := auth.NewSignUpAuthHandler(repo, rabbitMQ)
+	signUpAuthHandler := auth.NewSignUpAuthHandler(repo, rabbitMQ, jwtHelper)
+	activateAuthHandler := auth.NewActivateAuthHandler(repo, jwtHelper)
 	signInAuthHandler := auth.NewSignInAuthHandler(repo, redisRepo)
 	logoutAuthHandler := auth.NewLogoutAuthHandler(redisRepo)
 
@@ -52,15 +43,14 @@ func main() {
 	}
 
 	app := server.NewFiberApp(serverConfig)
-
 	authMiddleware := middlewares.NewAuthMiddleware(redisRepo)
-	// app.Use(authMiddleware.Authenticate())
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
-
 	app.Post("/signup", handler.HandleBasic[auth.SignUpAuthRequest, auth.SignUpAuthResponse](signUpAuthHandler))
 	app.Post("/signin", handler.HandleWithFiber[auth.SignInAuthRequest, auth.SignInAuthResponse](signInAuthHandler))
+	app.Post("/activate", handler.HandleWithFiber[auth.ActivateAuthRequest, auth.ActivateAuthResponse](activateAuthHandler))
+
 	protected := app.Group("/", authMiddleware.Authenticate())
 	{
 		protected.Get("/profile", profileHandler)
@@ -76,7 +66,6 @@ func main() {
 	}()
 
 	zap.L().Info("Server started on port", zap.String("port", appConfig.Server.Port))
-
 	graceful.WaitForShutdown(app, 5*time.Second)
 }
 

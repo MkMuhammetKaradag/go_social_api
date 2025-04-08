@@ -7,6 +7,8 @@ import (
 	"socialmedia/auth/domain"
 	"socialmedia/shared/messaging"
 	"time"
+
+	"github.com/golang-jwt/jwt"
 )
 
 type SignUpAuthRequest struct {
@@ -22,20 +24,23 @@ type SignUpAuthRequest struct {
 }
 
 type SignUpAuthResponse struct {
-	Message string `json:"message"`
+	Message             string `json:"message"`
+	UserActivationToken string `json:"userActivationToken"`
 }
 
 type SignUpAuthHandler struct {
 	repository Repository
 	rabbitMQ   RabbitMQ
+	jwtHelper  JwtHelper
 }
 
 var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-func NewSignUpAuthHandler(repository Repository, rabbitMQ RabbitMQ) *SignUpAuthHandler {
+func NewSignUpAuthHandler(repository Repository, rabbitMQ RabbitMQ, jwtHelper JwtHelper) *SignUpAuthHandler {
 	return &SignUpAuthHandler{
 		repository: repository,
 		rabbitMQ:   rabbitMQ,
+		jwtHelper:  jwtHelper,
 	}
 }
 func GenerateActivationCode() string {
@@ -47,24 +52,28 @@ func GenerateActivationCode() string {
 }
 
 func (h *SignUpAuthHandler) Handle(ctx context.Context, req *SignUpAuthRequest) (*SignUpAuthResponse, error) {
-	// authId := uuid.New().String()
-
+	activationCode := GenerateActivationCode()
 	auth := &domain.Auth{
-		Username: req.Username,
-		Email:    req.Email,
-		Password: req.Password,
+		Username:         req.Username,
+		Email:            req.Email,
+		Password:         req.Password,
+		ActivationCode:   activationCode,
+		ActivationExpiry: time.Now().Add(5 * time.Minute),
 	}
 
 	err := h.repository.SignUp(ctx, auth)
 	if err != nil {
 		return nil, err
 	}
-	activationCode := GenerateActivationCode()
-	payload := map[string]interface{}{
+	fmt.Println(activationCode)
+	payload := jwt.MapClaims{
 		"activationCode": activationCode,
-		"user":           req,
+		"email":          req.Email,
 	}
-	fmt.Println(payload)
+	activationToken, err := h.jwtHelper.SignToken(payload, 10*time.Minute)
+	if err != nil {
+		fmt.Println("err jwt  token:", err)
+	}
 
 	emailMessage := messaging.Message{
 		Type:      messaging.EmailTypes.ActivateUser,
@@ -82,5 +91,5 @@ func (h *SignUpAuthHandler) Handle(ctx context.Context, req *SignUpAuthRequest) 
 		return nil, err
 	}
 
-	return &SignUpAuthResponse{Message: "User Created"}, nil
+	return &SignUpAuthResponse{Message: "User Created", UserActivationToken: activationToken}, nil
 }

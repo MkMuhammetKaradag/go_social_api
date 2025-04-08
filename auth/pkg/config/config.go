@@ -11,6 +11,7 @@ type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
 	Redis    RedisConfig    `mapstructure:"redis"`
+	JWT      JwtConfig      `mapstructure:"jwt"`
 }
 
 type AppConfig struct {
@@ -36,6 +37,9 @@ type RedisConfig struct {
 	RedisURL string `mapstructure:"redisURL"`
 	Password string `mapstructure:"password"`
 	DB       int    `mapstructure:"db"`
+}
+type JwtConfig struct {
+	Secret string `mapstructure:"secret"`
 }
 
 func Read() *Config {

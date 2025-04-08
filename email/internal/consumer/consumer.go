@@ -11,8 +11,6 @@ type EmailData struct {
 	UserName       string
 }
 
-// StartEmailConsumer başlatılırken çağrılır.
-
 func StartEmailConsumer() (*messaging.RabbitMQ, error) {
 	messageConfig := messaging.NewDefaultConfig()
 
@@ -22,15 +20,11 @@ func StartEmailConsumer() (*messaging.RabbitMQ, error) {
 	}
 
 	go func() {
-		// defer rabbit.Close()
 
 		err = rabbit.ConsumeMessages(func(msg messaging.Message) error {
-			// fmt.Println(msg)
-			// if msg.Type == "active_user" || msg.Type == "forgot_password" {
-			// 	log.Println("Mesaj alındı:", msg)
+
 			return handleSendEmail(msg)
-			// }
-			// return nil
+
 		})
 		if err != nil {
 			log.Fatal("Mesaj dinleyici başlatılamadı:", err)
