@@ -6,7 +6,7 @@ import (
 
 type Message struct {
 	ID          string      `json:"id"`           // Unique message ID
-	Type        string      `json:"type"`         // Message type (e.g., "user_created")
+	Type        MessageType `json:"type"`         // Message type (e.g., "user_created")
 	Data        interface{} `json:"data"`         // Actual message payload
 	Created     time.Time   `json:"created"`      // Message creation time
 	FromService ServiceType `json:"from_service"` // Source service

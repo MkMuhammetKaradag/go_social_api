@@ -7,7 +7,7 @@ import (
 
 func InitMessaging() *messaging.RabbitMQ {
 	config := messaging.NewDefaultConfig()
-	config.RetryTypes = []string{"user_created"}
+	config.RetryTypes = []messaging.MessageType{messaging.UserTypes.UserCreated}
 
 	rabbitMQ, err := messaging.NewRabbitMQ(config, messaging.AuthService)
 	if err != nil {

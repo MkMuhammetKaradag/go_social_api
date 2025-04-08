@@ -85,7 +85,12 @@ func (r *RabbitMQ) PublishMessage(ctx context.Context, msg Message) error {
 	if msg.ToService == r.service {
 		return &MessagingError{Code: "INVALID_TARGET", Message: "Service cannot send message to itself"}
 	}
-
+	if !isAllowedMessageType(msg.ToService, msg.Type) {
+		return &MessagingError{
+			Code:    "INVALID_TYPE",
+			Message: fmt.Sprintf("Message type '%s' is not allowed for service '%s'", msg.Type, msg.ToService),
+		}
+	}
 	body, err := json.Marshal(msg)
 	if err != nil {
 		return &MessagingError{Code: "MARSHAL_FAILED", Message: "Failed to marshal message", Err: err}

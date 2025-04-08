@@ -67,7 +67,7 @@ func (h *SignUpAuthHandler) Handle(ctx context.Context, req *SignUpAuthRequest) 
 	fmt.Println(payload)
 
 	emailMessage := messaging.Message{
-		Type:      "active_user",
+		Type:      messaging.EmailTypes.ActivateUser,
 		ToService: messaging.EmailService,
 		Data: map[string]interface{}{
 			"email":           req.Email,
@@ -79,7 +79,7 @@ func (h *SignUpAuthHandler) Handle(ctx context.Context, req *SignUpAuthRequest) 
 
 	if err := h.rabbitMQ.PublishMessage(context.Background(), emailMessage); err != nil {
 
-		return nil, fmt.Errorf("Aktivasyon e-postası gönderilemedi")
+		return nil, err
 	}
 
 	return &SignUpAuthResponse{Message: "User Created"}, nil

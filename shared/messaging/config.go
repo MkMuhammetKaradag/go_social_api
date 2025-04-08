@@ -12,26 +12,21 @@ type Config struct {
 	Password string
 	VHost    string `default:"/"`
 
-
-	ExchangeName        string `default:"microservices.broadcast"`
-	RetryExchangeName   string `default:"microservices.retry"`
-
+	ExchangeName      string `default:"microservices.broadcast"`
+	RetryExchangeName string `default:"microservices.retry"`
 
 	MaxRetries  int           `default:"3"`
 	RetryDelay  time.Duration `default:"5s"`
-	RetryTypes  []string
+	RetryTypes  []MessageType
 	EnableRetry bool `default:"true"`
-
 
 	ConnectionTimeout time.Duration `default:"30s"`
 	ReadTimeout       time.Duration `default:"30s"`
 	WriteTimeout      time.Duration `default:"30s"`
 
-
 	QueueDurable    bool `default:"true"`
 	QueueAutoDelete bool `default:"false"`
 }
-
 
 func NewDefaultConfig() Config {
 	return Config{
