@@ -31,6 +31,7 @@ func main() {
 	defer rabbitMQ.Close()
 
 	signUpAuthHandler := auth.NewSignUpAuthHandler(repo, rabbitMQ, jwtHelper)
+	forgotPasswordAuthHandler := auth.NewForgotPasswordAuthHandler(repo, rabbitMQ)
 	activateAuthHandler := auth.NewActivateAuthHandler(repo, jwtHelper)
 	signInAuthHandler := auth.NewSignInAuthHandler(repo, redisRepo)
 	logoutAuthHandler := auth.NewLogoutAuthHandler(redisRepo)
@@ -50,6 +51,7 @@ func main() {
 	app.Post("/signup", handler.HandleBasic[auth.SignUpAuthRequest, auth.SignUpAuthResponse](signUpAuthHandler))
 	app.Post("/signin", handler.HandleWithFiber[auth.SignInAuthRequest, auth.SignInAuthResponse](signInAuthHandler))
 	app.Post("/activate", handler.HandleWithFiber[auth.ActivateAuthRequest, auth.ActivateAuthResponse](activateAuthHandler))
+	app.Post("/forgotpassword", handler.HandleBasic[auth.ForgotPasswordAuthRequest, auth.ForgotPasswordAuthResponse](forgotPasswordAuthHandler))
 
 	protected := app.Group("/", authMiddleware.Authenticate())
 	{

@@ -16,3 +16,9 @@ type AuthResponse struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
 }
+
+type ForgotPassword struct {
+	Email     string    `json:"email"`
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expiresAt"`
+}

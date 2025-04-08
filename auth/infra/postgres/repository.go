@@ -34,7 +34,7 @@ func NewPgRepository(connString string) (*PgRepository, error) {
 	return &PgRepository{db: db}, nil
 }
 func InitDB(db *sql.DB) error {
-	query := `
+	queryUsers := `
 	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
 		username VARCHAR(50) NOT NULL UNIQUE,
@@ -46,9 +46,23 @@ func InitDB(db *sql.DB) error {
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 	);` // created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
-	_, err := db.Exec(query)
+	queryForgotPasswords := `
+	CREATE TABLE IF NOT EXISTS forgotPasswords (
+		id SERIAL PRIMARY KEY,
+		user_id INT REFERENCES users(id) ON DELETE CASCADE,
+		token TEXT NOT NULL,
+		expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+	);`
+
+	_, err := db.Exec(queryUsers)
 	if err != nil {
 		return fmt.Errorf("failed to create users table: %w", err)
+	}
+
+	_, err = db.Exec(queryForgotPasswords)
+	if err != nil {
+		return fmt.Errorf("failed to create resetPasswords table: %w", err)
 	}
 
 	log.Println("Users table created (if not exists)")
@@ -76,6 +90,32 @@ func (r *PgRepository) SignUp(ctx context.Context, auth *domain.Auth) error {
 
 	return nil
 }
+
+func (r *PgRepository) RequestForgotPassword(ctx context.Context, forgotPassword *domain.ForgotPassword) (*string, error) {
+	// Kullanıcıyı e-posta adresine göre bulalım
+	var userID int
+	var username string
+	queryUser := `SELECT id,username  FROM users WHERE email = $1`
+	err := r.db.QueryRowContext(ctx, queryUser, forgotPassword.Email).Scan(&userID, &username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Eğer kullanıcı bulunamazsa, hata vermek yerine sadece işlem yapma
+			return nil, fmt.Errorf("user not found with the provided email")
+		}
+		return nil, fmt.Errorf("failed to find user: %w", err)
+	}
+
+	queryResetPassword := `
+		INSERT INTO forgotPasswords (user_id, token, expires_at) 
+		VALUES ($1, $2, $3)`
+	_, err = r.db.ExecContext(ctx, queryResetPassword, userID, forgotPassword.Token, forgotPassword.ExpiresAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert reset password record: %w", err)
+	}
+
+	return &username, nil
+}
+
 func (r *PgRepository) Activate(ctx context.Context, userEmail string, activationCode string) (*domain.Auth, error) {
 	// 1. Kullanıcıyı email ve activation code ile bul
 	query := `
