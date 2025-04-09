@@ -37,12 +37,14 @@ func main() {
 	activateUseCase := usecase.NewActivateUseCase(repo, jwtHelper)
 	signInUseCase := usecase.NewSignInUseCase(repo, redisRepo)
 	logoutUseCase := usecase.NewLogoutUseCase(redisRepo)
+	resetPasswordUseCase := usecase.NewResetPasswordUseCase(repo, redisRepo)
 
 	signUpAuthHandler := auth.NewSignUpAuthHandler(signUpUseCase)
 	forgotPasswordAuthHandler := auth.NewForgotPasswordAuthHandler(forgotPasswordUseCase)
 	activateAuthHandler := auth.NewActivateAuthHandler(activateUseCase)
 	signInAuthHandler := auth.NewSignInAuthHandler(signInUseCase)
 	logoutAuthHandler := auth.NewLogoutAuthHandler(logoutUseCase)
+	resetPasswordAuthHandler := auth.NewResetPasswordAuthHandler(resetPasswordUseCase)
 
 	serverConfig := server.Config{
 		Port:         appConfig.Server.Port,
@@ -60,6 +62,7 @@ func main() {
 	app.Post("/signin", handler.HandleWithFiber[auth.SignInAuthRequest, auth.SignInAuthResponse](signInAuthHandler))
 	app.Post("/activate", handler.HandleBasic[auth.ActivateAuthRequest, auth.ActivateAuthResponse](activateAuthHandler))
 	app.Post("/forgotpassword", handler.HandleBasic[auth.ForgotPasswordAuthRequest, auth.ForgotPasswordAuthResponse](forgotPasswordAuthHandler))
+	app.Post("/resetpassword", handler.HandleBasic[auth.ResetPasswordAuthRequest, auth.ResetPasswordAuthResponse](resetPasswordAuthHandler))
 
 	protected := app.Group("/", authMiddleware.Authenticate())
 	{

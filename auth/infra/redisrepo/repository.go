@@ -32,8 +32,12 @@ func (r *RedisRepository) SetSession(ctx context.Context, key string, userId str
 	if err != nil {
 		return err
 	}
-	r.Client.SAdd(ctx, "user_sessions:"+userId, key)
-	return r.Client.Set(ctx, key, jsonData, expiration).Err()
+
+	pipe := r.Client.Pipeline()
+	pipe.Set(ctx, key, jsonData, expiration)
+	pipe.SAdd(ctx, "user_sessions:"+userId, key)
+	_, err = pipe.Exec(ctx)
+	return err
 }
 
 func (r *RedisRepository) GetSession(ctx context.Context, key string) (map[string]string, error) {
@@ -51,11 +55,39 @@ func (r *RedisRepository) GetSession(ctx context.Context, key string) (map[strin
 
 func (r *RedisRepository) DeleteSession(ctx context.Context, key string, userID string) error {
 
-	err := r.Client.Del(ctx, key).Err()
+	pipe := r.Client.Pipeline()
+	pipe.Del(ctx, key)
+	pipe.SRem(ctx, "user_sessions:"+userID, key)
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+func (r *RedisRepository) DeleteAllUserSessions(ctx context.Context, userID string) error {
+	sessionKey := "user_sessions:" + userID
+
+	sessionKeys, err := r.Client.SMembers(ctx, sessionKey).Result()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get user sessions: %w", err)
 	}
-	return r.Client.SRem(ctx, "user_sessions:"+userID, key).Err()
+
+	if len(sessionKeys) == 0 {
+		return nil
+	}
+
+	pipe := r.Client.Pipeline()
+
+	for _, key := range sessionKeys {
+		pipe.Del(ctx, key)
+	}
+
+	pipe.Del(ctx, sessionKey)
+
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete sessions: %w", err)
+	}
+
+	return nil
 }
 
 // func (r *RedisRepository) PublishStatus(ctx context.Context, userID string, status string) error {

@@ -10,6 +10,9 @@ import (
 type ForgotPasswordUseCase interface {
 	Execute(ctx context.Context, email string) error
 }
+type ResetPasswordUseCase interface {
+	Execute(ctx context.Context, token, password string) error
+}
 type LogoutUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context) error
 }

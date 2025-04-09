@@ -201,6 +201,86 @@ func (r *PgRepository) SignIn(ctx context.Context, identifier, password string) 
 	return &auth, nil
 }
 
+func (r *PgRepository) ResetPassword(ctx context.Context, token, password string) (*int, error) {
+
+	userID, expiryTime, err := r.getUserIDFromToken(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("password reset failed: %w", err)
+	}
+
+	if time.Now().After(expiryTime) {
+		if err := r.deleteExpiredToken(ctx, token); err != nil {
+			return nil, fmt.Errorf("failed to delete expired token: %w", err)
+		}
+		return nil, fmt.Errorf("token has expired")
+	}
+
+	hashedPassword, err := r.HashPassword(password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	if err := r.updateUserPassword(ctx, userID, hashedPassword); err != nil {
+		return nil, fmt.Errorf("failed to update password: %w", err)
+	}
+
+	if err := r.deleteToken(ctx, token); err != nil {
+
+		log.Printf("warning: failed to delete token after password reset: %v", err)
+	}
+
+	return &userID, nil
+}
+
+func (r *PgRepository) getUserIDFromToken(ctx context.Context, token string) (int, time.Time, error) {
+	var userID int
+	var expiryTime time.Time
+
+	query := `SELECT user_id, expires_at FROM forgotPasswords WHERE token = $1`
+	err := r.db.QueryRowContext(ctx, query, token).Scan(&userID, &expiryTime)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, time.Time{}, fmt.Errorf("token not found")
+		}
+		return 0, time.Time{}, fmt.Errorf("database error: %w", err)
+	}
+
+	return userID, expiryTime, nil
+}
+
+func (r *PgRepository) deleteExpiredToken(ctx context.Context, token string) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM forgotPasswords WHERE token = $1", token)
+	if err != nil {
+		return fmt.Errorf("failed to delete expired token: %w", err)
+	}
+	return nil
+}
+
+func (r *PgRepository) updateUserPassword(ctx context.Context, userID int, hashedPassword string) error {
+	updateQuery := `UPDATE users SET password = $1 WHERE id = $2`
+	result, err := r.db.ExecContext(ctx, updateQuery, hashedPassword, userID)
+	if err != nil {
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
+func (r *PgRepository) deleteToken(ctx context.Context, token string) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM forgotPasswords WHERE token = $1", token)
+	return err
+}
+
 func (r *PgRepository) StartCleanupJob(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	go func() {
