@@ -24,16 +24,16 @@ func (u *activateUseCase) Execute(ctx context.Context, activationToken, activati
 	if err != nil {
 		return nil, fmt.Errorf("error verifying token: %w", err)
 	}
-	code := claims["activationCode"].(string)
-	if code != activationCode {
-		return nil, errors.New("activation code mismatch")
-	}
+	// code := claims["activationCode"].(string)
+	// if code != activationCode {
+	// 	return nil, errors.New("activation code mismatch")
+	// }
 	userEmail, ok := claims["email"].(string)
 	if !ok {
 		return nil, errors.New("invalid user data in token")
 	}
 
-	auth, err := u.repository.Activate(ctx, userEmail, code)
+	auth, err := u.repository.Activate(ctx, userEmail, activationCode)
 	if err != nil {
 		return nil, err
 	}

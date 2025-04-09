@@ -48,8 +48,8 @@ func (u *signUpUseCase) Execute(ctx context.Context, req *SignUpRequest) (*strin
 	}
 
 	payload := jwt.MapClaims{
-		"activationCode": activationCode,
-		"email":          req.Email,
+		// "activationCode": activationCode,
+		"email": req.Email,
 	}
 
 	activationToken, err := u.jwtHelper.SignToken(payload, 10*time.Minute)
