@@ -3,7 +3,9 @@ package main
 
 import (
 	"os"
-	"socialmedia/auth/app/auth"
+
+	auth "socialmedia/auth/app/auth/handler"
+	"socialmedia/auth/app/auth/usecase"
 	"socialmedia/auth/internal/handler"
 	"socialmedia/auth/internal/initializer"
 	"socialmedia/auth/internal/server"
@@ -30,11 +32,17 @@ func main() {
 
 	defer rabbitMQ.Close()
 
-	signUpAuthHandler := auth.NewSignUpAuthHandler(repo, rabbitMQ, jwtHelper)
-	forgotPasswordAuthHandler := auth.NewForgotPasswordAuthHandler(repo, rabbitMQ)
-	activateAuthHandler := auth.NewActivateAuthHandler(repo, jwtHelper)
-	signInAuthHandler := auth.NewSignInAuthHandler(repo, redisRepo)
-	logoutAuthHandler := auth.NewLogoutAuthHandler(redisRepo)
+	signUpUseCase := usecase.NewSignUpUseCase(repo, rabbitMQ, jwtHelper)
+	forgotPasswordUseCase := usecase.NewForgotPasswordUseCase(repo, rabbitMQ)
+	activateUseCase := usecase.NewActivateUseCase(repo, jwtHelper)
+	signInUseCase := usecase.NewSignInUseCase(repo, redisRepo)
+	logoutUseCase := usecase.NewLogoutUseCase(redisRepo)
+
+	signUpAuthHandler := auth.NewSignUpAuthHandler(signUpUseCase)
+	forgotPasswordAuthHandler := auth.NewForgotPasswordAuthHandler(forgotPasswordUseCase)
+	activateAuthHandler := auth.NewActivateAuthHandler(activateUseCase)
+	signInAuthHandler := auth.NewSignInAuthHandler(signInUseCase)
+	logoutAuthHandler := auth.NewLogoutAuthHandler(logoutUseCase)
 
 	serverConfig := server.Config{
 		Port:         appConfig.Server.Port,
@@ -50,7 +58,7 @@ func main() {
 	})
 	app.Post("/signup", handler.HandleBasic[auth.SignUpAuthRequest, auth.SignUpAuthResponse](signUpAuthHandler))
 	app.Post("/signin", handler.HandleWithFiber[auth.SignInAuthRequest, auth.SignInAuthResponse](signInAuthHandler))
-	app.Post("/activate", handler.HandleWithFiber[auth.ActivateAuthRequest, auth.ActivateAuthResponse](activateAuthHandler))
+	app.Post("/activate", handler.HandleBasic[auth.ActivateAuthRequest, auth.ActivateAuthResponse](activateAuthHandler))
 	app.Post("/forgotpassword", handler.HandleBasic[auth.ForgotPasswordAuthRequest, auth.ForgotPasswordAuthResponse](forgotPasswordAuthHandler))
 
 	protected := app.Group("/", authMiddleware.Authenticate())
