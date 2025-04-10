@@ -11,7 +11,7 @@ type EmailData struct {
 	UserName       string
 }
 
-func StartEmailConsumer() (*messaging.RabbitMQ, error) {
+func StartEmailConsumer(handler func(messaging.Message) error) (*messaging.RabbitMQ, error) {
 	messageConfig := messaging.NewDefaultConfig()
 
 	rabbit, err := messaging.NewRabbitMQ(messageConfig, messaging.EmailService)
@@ -23,7 +23,7 @@ func StartEmailConsumer() (*messaging.RabbitMQ, error) {
 
 		err = rabbit.ConsumeMessages(func(msg messaging.Message) error {
 
-			return handleSendEmail(msg)
+			return handler(msg)
 
 		})
 		if err != nil {

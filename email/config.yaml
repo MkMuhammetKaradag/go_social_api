@@ -1,5 +1,9 @@
 server:
   port: 8081
   host: 'localhost'
-
+smtp:
+  host: 'smtp.gmail.com' 
+  port: '587'
+  email: 'example.com'
+  timeout: 10s 
 

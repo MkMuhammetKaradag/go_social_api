@@ -11,7 +11,7 @@ const (
 )
 
 var EmailTypes = struct {
-	ActivateUser   MessageType
+	ActivateUser   MessageType 
 	ForgotPassword MessageType
 }{
 	ActivateUser:   "active_user",

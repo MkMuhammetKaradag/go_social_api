@@ -42,7 +42,7 @@ func (u *forgotPasswordUseCase) Execute(ctx context.Context, email string) error
 		Data: map[string]interface{}{
 			"email":           email,
 			"activation_code": token,
-			"template_name":   "activation_email.html",
+			"template_name":   "forgot_password.html",
 			"userName":        username,
 		},
 	}
