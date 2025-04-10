@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"socialmedia/auth/domain"
 	"socialmedia/shared/messaging"
 	"time"
@@ -35,15 +36,15 @@ func (u *forgotPasswordUseCase) Execute(ctx context.Context, email string) error
 	if err != nil {
 		return err
 	}
-
+	resetLink := fmt.Sprintf("http://localhost:3000/resetPassword?token=%s", token)
 	emailMessage := messaging.Message{
 		Type:      messaging.EmailTypes.ForgotPassword,
 		ToService: messaging.EmailService,
 		Data: map[string]interface{}{
-			"email":           email,
-			"activation_code": token,
-			"template_name":   "forgot_password.html",
-			"userName":        username,
+			"email":         email,
+			"reset_link":    resetLink,
+			"template_name": "forgot_password.html",
+			"userName":      username,
 		},
 	}
 
