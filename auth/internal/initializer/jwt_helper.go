@@ -1,7 +1,7 @@
 package initializer
 
 import (
-	jwthelper "socialmedia/auth/infra/jwtHelper"
+	jwthelper "socialmedia/auth/infra/jwthelper"
 	"socialmedia/auth/pkg/config"
 )
 

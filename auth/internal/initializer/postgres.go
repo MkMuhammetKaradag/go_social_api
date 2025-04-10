@@ -5,13 +5,12 @@ import (
 	"log"
 	"socialmedia/auth/infra/postgres"
 	"socialmedia/auth/pkg/config"
-	"time"
 )
 
-func InitDatabase(appConfig *config.Config) *postgres.PgRepository {
+func InitDatabase(appConfig *config.Config) *postgres.Repository {
 	databaseURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", appConfig.Database.User, appConfig.Database.Password, appConfig.Database.Host, appConfig.Database.Port, appConfig.Database.DB)
-	repo, err := postgres.NewPgRepository(databaseURL)
-	repo.StartCleanupJob(5 * time.Minute)
+	repo, err := postgres.NewRepository(databaseURL)
+	// repo.StartCleanupJob(5 * time.Minute)
 	if err != nil {
 		log.Fatalf("Database connection failed: %v", err)
 	}

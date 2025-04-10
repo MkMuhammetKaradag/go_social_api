@@ -32,7 +32,6 @@ func (u *signInUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, identifi
 	device := fbrCtx.Get("User-Agent")
 	ip := fbrCtx.IP()
 
-	// fmt.Println(device, ip)
 	userData := map[string]string{
 		"id":       strconv.Itoa(int(auth.ID)),
 		"email":    auth.Email,

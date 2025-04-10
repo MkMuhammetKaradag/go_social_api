@@ -43,7 +43,7 @@ func (u *forgotPasswordUseCase) Execute(ctx context.Context, email string) error
 			"email":           email,
 			"activation_code": token,
 			"template_name":   "activation_email.html",
-			"userName":        *username,
+			"userName":        username,
 		},
 	}
 

@@ -24,10 +24,6 @@ func (u *activateUseCase) Execute(ctx context.Context, activationToken, activati
 	if err != nil {
 		return nil, fmt.Errorf("error verifying token: %w", err)
 	}
-	// code := claims["activationCode"].(string)
-	// if code != activationCode {
-	// 	return nil, errors.New("activation code mismatch")
-	// }
 	userEmail, ok := claims["email"].(string)
 	if !ok {
 		return nil, errors.New("invalid user data in token")

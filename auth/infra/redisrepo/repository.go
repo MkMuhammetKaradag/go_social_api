@@ -89,11 +89,3 @@ func (r *RedisRepository) DeleteAllUserSessions(ctx context.Context, userID stri
 
 	return nil
 }
-
-// func (r *RedisRepository) PublishStatus(ctx context.Context, userID string, status string) error {
-// 	return r.Client.Publish(ctx, "user_status", userID+":"+status).Err()
-// }
-
-// func (r *RedisRepository) PublishChatMessage(ctx context.Context, chatID string, content string, senderID string) error {
-// 	return r.Client.Publish(ctx, "send_Message", chatID+":"+content+":"+senderID).Err()
-// }
