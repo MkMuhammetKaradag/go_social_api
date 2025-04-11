@@ -3,22 +3,24 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15
-    container_name: auth-postgres
+    container_name: my-postgres
     restart: always
     environment:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: auth
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d # çok önemli
+
   redis:
-    image: 'redis:alpine'
+    image: redis:alpine
     ports:
       - '6379:6379'
+
   rabbitmq:
-    image: 'rabbitmq:3-management'
+    image: rabbitmq:3-management
     ports:
       - '5672:5672'
       - '15672:15672'
