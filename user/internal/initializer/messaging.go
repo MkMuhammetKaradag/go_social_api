@@ -5,7 +5,7 @@ import (
 	"socialmedia/shared/messaging"
 )
 
-func InitMessaging() *messaging.RabbitMQ {
+func InitMessaging(handler func(messaging.Message) error) *messaging.RabbitMQ {
 	config := messaging.NewDefaultConfig()
 	config.RetryTypes = []messaging.MessageType{messaging.UserTypes.UserCreated}
 
@@ -13,5 +13,18 @@ func InitMessaging() *messaging.RabbitMQ {
 	if err != nil {
 		log.Fatalf("RabbitMQ bağlantısı kurulamadı: %v", err)
 	}
+
+	go func() {
+
+		err = rabbitMQ.ConsumeMessages(func(msg messaging.Message) error {
+
+			return handler(msg)
+
+		})
+		if err != nil {
+			log.Fatal("Mesaj dinleyici başlatılamadı:", err)
+		}
+
+	}()
 	return rabbitMQ
 }

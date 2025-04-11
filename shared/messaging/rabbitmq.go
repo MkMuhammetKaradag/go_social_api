@@ -23,6 +23,11 @@ type RabbitMQ struct {
 	reconnect chan bool
 }
 
+const (
+	DLQExchangeName = "dead_letter.exchange"
+	DLQName         = "dead_letter.queue"
+)
+
 func NewRabbitMQ(config Config, serviceType ServiceType) (*RabbitMQ, error) {
 	r := &RabbitMQ{
 		config:    config,
@@ -78,7 +83,7 @@ func (r *RabbitMQ) PublishMessage(ctx context.Context, msg Message) error {
 	if msg.Created.IsZero() {
 		msg.Created = time.Now()
 	}
-	fmt.Println(msg)
+	// fmt.Println(msg)
 
 	msg.FromService = r.service
 
@@ -98,7 +103,7 @@ func (r *RabbitMQ) PublishMessage(ctx context.Context, msg Message) error {
 	if msg.ToService != "" {
 
 		serviceExchangeName := fmt.Sprintf("microservices.%s.service", msg.ToService)
-		fmt.Println(serviceExchangeName)
+		// fmt.Println(serviceExchangeName)
 		return r.channel.PublishWithContext(ctx,
 			serviceExchangeName,
 			"",
@@ -201,6 +206,7 @@ func (r *RabbitMQ) setupExchanges(ch *amqp.Channel, serviceType ServiceType) err
 	}
 
 	if r.config.EnableRetry {
+		// Retry exchange
 		err = ch.ExchangeDeclare(
 			r.config.RetryExchangeName,
 			"direct",
@@ -210,8 +216,76 @@ func (r *RabbitMQ) setupExchanges(ch *amqp.Channel, serviceType ServiceType) err
 			false,
 			nil,
 		)
+		if err != nil {
+			return err
+		}
+
+		// Tek bir retry kuyruğu oluştur
+		retryQueueName := string(serviceType) + ".retry.queue"
+		_, err = ch.QueueDeclare(
+			retryQueueName,
+			true,
+			false,
+			false,
+			false,
+			amqp.Table{
+				"x-dead-letter-exchange":    r.config.ExchangeName, // retry sonrası ana kuyruğa
+				"x-dead-letter-routing-key": string(serviceType),
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		// Bind retry queue to retry exchange
+		err = ch.QueueBind(
+			retryQueueName,
+			string(serviceType), // Tek bir routing key kullan
+			r.config.RetryExchangeName,
+			false,
+			nil,
+		)
+		if err != nil {
+			return err
+		}
 	}
+
+	err = ch.ExchangeDeclare(
+		DLQExchangeName,
+		"fanout",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	// DLQ queue
+	_, err = ch.QueueDeclare(
+		DLQName,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	// DLQ queue bind
+	err = ch.QueueBind(
+		DLQName,
+		"",
+		DLQExchangeName,
+		false,
+		nil,
+	)
 	return err
+
 }
 
 func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
@@ -223,7 +297,9 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 		r.config.QueueAutoDelete,
 		false,
 		false,
-		nil,
+		amqp.Table{
+			"x-dead-letter-exchange": DLQExchangeName,
+		},
 	)
 	if err != nil {
 		return &MessagingError{Code: "QUEUE_FAILED", Message: "Failed to declare queue", Err: err}
@@ -269,21 +345,28 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 			var message Message
 			if err := json.Unmarshal(msg.Body, &message); err != nil {
 				log.Printf("Failed to unmarshal message: %v", err)
-				msg.Nack(false, false)
+				msg.Nack(false, false) // DLQ'ya gönder
 				continue
 			}
 
-			if err := handler(message); err != nil {
+			log.Printf("Processing message [ID: %s, Type: %s, RetryCount: %d]",
+				message.ID, message.Type, message.RetryCount)
+
+			err := handler(message)
+
+			if err != nil {
+				log.Printf("Message processing failed: %v", err)
 
 				if r.shouldRetry(message) {
-					r.handleRetry(message)
-					msg.Nack(false, false)
+					log.Printf("Scheduling retry for message ID: %s", message.ID)
+					r.handleRetry(&message)
+					msg.Ack(false) // Orijinal mesajı kabul et, retry kuyruğunda yeni bir kopya var
 				} else {
-
-					log.Printf("Message processing failed: %v", err)
-					msg.Nack(false, false)
+					log.Printf("Message failed permanently, sending to DLQ. ID: %s", message.ID)
+					msg.Nack(false, false) // DLQ'ya gönder
 				}
 			} else {
+				log.Printf("Message processed successfully. ID: %s", message.ID)
 				msg.Ack(false)
 			}
 		}
@@ -291,19 +374,91 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 
 	return nil
 }
+
+func (r *RabbitMQ) ConsumeDLQ(handler MessageHandler) error {
+	msgs, err := r.channel.Consume(
+		DLQName,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for msg := range msgs {
+			var message Message
+			if err := json.Unmarshal(msg.Body, &message); err != nil {
+				log.Printf("DLQ Message Unmarshal Error: %v", err)
+				continue
+			}
+			log.Println("DLQ'dan mesaj alındı:", message)
+			_ = handler(message)
+		}
+	}()
+	return nil
+}
 func (r *RabbitMQ) shouldRetry(msg Message) bool {
+	// Retry özelliği aktif değilse, hiç deneme yapma
 	if !r.config.EnableRetry {
 		return false
 	}
 
+	// Mesaj tipi retry listesinde mi kontrol et
+	isRetryableType := false
 	for _, t := range r.config.RetryTypes {
-		if t == msg.Type {
-			return msg.RetryCount < r.config.MaxRetries
+		if t == msg.Type { // Burada Type kontrolü yapılıyor
+			isRetryableType = true
+			break
 		}
 	}
+
+	// Retry tipi ve sayısı uygun mu?
+	if isRetryableType && msg.RetryCount < r.config.MaxRetries {
+		log.Printf("Message will be retried. Current retry count: %d, Max retries: %d",
+			msg.RetryCount, r.config.MaxRetries)
+		return true
+	}
+
 	return false
 }
 
-func (r *RabbitMQ) handleRetry(msg Message) {
+func (r *RabbitMQ) handleRetry(msg *Message) {
+	// Retry sayısını artır
 	msg.RetryCount++
+
+	// 5 saniye * retry sayısı kadar bekle (örn: 1. retry için 5sn, 2. için 10sn)
+	retryDelay := 5000 * msg.RetryCount // 5000ms = 5sn
+
+	body, err := json.Marshal(msg)
+	if err != nil {
+		log.Printf("handleRetry marshal error: %v", err)
+		return
+	}
+
+	err = r.channel.Publish(
+		r.config.RetryExchangeName, // retry exchange
+		string(msg.ToService),      // Tek routing key kullan
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         body,
+			MessageId:    msg.ID,
+			Timestamp:    time.Now(),
+			DeliveryMode: 2,
+			Headers:      amqp.Table(msg.Headers),
+			Expiration:   fmt.Sprintf("%d", retryDelay), // Mesaja özel TTL süresi
+		},
+	)
+
+	if err != nil {
+		log.Printf("handleRetry publish error: %v", err)
+	} else {
+		log.Printf("Message sent to retry queue with delay of %d seconds", retryDelay/1000)
+	}
 }

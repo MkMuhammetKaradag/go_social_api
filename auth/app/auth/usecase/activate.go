@@ -5,17 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"socialmedia/auth/domain"
+	"socialmedia/shared/messaging"
 )
 
 type activateUseCase struct {
 	repository Repository
 	jwtHelper  JwtHelper
+	rabbitMQ   RabbitMQ
 }
 
-func NewActivateUseCase(repository Repository, jwtHelper JwtHelper) ActivateUseCase {
+func NewActivateUseCase(repository Repository, jwtHelper JwtHelper, rabbitMQ RabbitMQ) ActivateUseCase {
 	return &activateUseCase{
 		repository: repository,
 		jwtHelper:  jwtHelper,
+		rabbitMQ:   rabbitMQ,
 	}
 }
 
@@ -39,5 +42,22 @@ func (u *activateUseCase) Execute(ctx context.Context, activationToken, activati
 		Username: auth.Username,
 		Email:    auth.Email,
 	}
+
+	userCreatedMessage := messaging.Message{
+		Type:       messaging.UserTypes.UserCreated,
+		ToService:  messaging.UserService,
+		RetryCount: 4,
+		Data: map[string]interface{}{
+			"id":       response.ID,
+			"email":    response.Email,
+			"username": response.Username,
+		},
+	}
+
+	if err := u.rabbitMQ.PublishMessage(context.Background(), userCreatedMessage); err != nil {
+		// log.Printf("User creation message could not be sent: %v", err)
+		return nil, err
+	}
+
 	return response, nil
 }

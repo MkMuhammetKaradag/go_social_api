@@ -27,7 +27,6 @@ func initDB(db *sql.DB) error {
 		return fmt.Errorf("failed to create users table: %w", err)
 	}
 
-	
 
 	log.Println("Database tables initialized")
 	return nil

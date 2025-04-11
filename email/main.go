@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"socialmedia/auth/pkg/graceful"
@@ -23,6 +22,7 @@ func main() {
 
 	activationHandler := handler.NewActivationEmailHandler(activationUsecase)
 	passwordResetHandler := handler.NewPasswordResetEmailHandler(passwordResetUsecase)
+
 	messageRouter := func(msg messaging.Message) error {
 		switch msg.Type {
 		case messaging.EmailTypes.ActivateUser:
@@ -39,7 +39,6 @@ func main() {
 		log.Fatal("RabbitMQ başlatılamadı:", err)
 	}
 	defer rabbit.Close()
-	fmt.Println(appConfig.SMTP.Email)
 
 	serverConfig := server.Config{
 		Port:         appConfig.Server.Port,

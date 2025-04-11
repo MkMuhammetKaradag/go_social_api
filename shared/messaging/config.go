@@ -15,10 +15,11 @@ type Config struct {
 	ExchangeName      string `default:"microservices.broadcast"`
 	RetryExchangeName string `default:"microservices.retry"`
 
-	MaxRetries  int           `default:"3"`
-	RetryDelay  time.Duration `default:"5s"`
-	RetryTypes  []MessageType
-	EnableRetry bool `default:"true"`
+	MaxRetries   int           `default:"5"`
+	RetryDelayMs int           `default:"5000"`
+	RetryDelay   time.Duration `default:"10s"`
+	RetryTypes   []MessageType
+	EnableRetry  bool `default:"true"`
 
 	ConnectionTimeout time.Duration `default:"30s"`
 	ReadTimeout       time.Duration `default:"30s"`
@@ -37,8 +38,9 @@ func NewDefaultConfig() Config {
 		VHost:             "/",
 		ExchangeName:      "microservices.broadcast",
 		RetryExchangeName: "microservices.retry",
-		MaxRetries:        3,
+		MaxRetries:        5,
 		RetryDelay:        5 * time.Second,
+		RetryDelayMs:      5000,
 		EnableRetry:       true,
 		ConnectionTimeout: 30 * time.Second,
 		ReadTimeout:       30 * time.Second,

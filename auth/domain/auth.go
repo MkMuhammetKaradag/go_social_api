@@ -3,7 +3,7 @@ package domain
 import "time"
 
 type Auth struct {
-	ID               int64     `json:"id"`
+	ID               string    `json:"id"`
 	Username         string    `json:"username"`
 	Email            string    `json:"email"`
 	Password         string    `json:"password"`
@@ -12,7 +12,7 @@ type Auth struct {
 }
 
 type AuthResponse struct {
-	ID       int64  `json:"id"`
+	ID       string `json:"id"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
 }

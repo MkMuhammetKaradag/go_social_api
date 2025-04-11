@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"socialmedia/auth/domain"
-	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -27,13 +26,13 @@ func (u *signInUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, identifi
 	if err != nil {
 		return nil, err
 	}
-	sessionKey := strconv.Itoa(int(auth.ID))
+	sessionKey := auth.ID
 	sessionID := uuid.New().String()
 	device := fbrCtx.Get("User-Agent")
 	ip := fbrCtx.IP()
 
 	userData := map[string]string{
-		"id":       strconv.Itoa(int(auth.ID)),
+		"id":       auth.ID,
 		"email":    auth.Email,
 		"device":   device,
 		"ip":       ip,

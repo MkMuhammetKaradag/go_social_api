@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"socialmedia/user/app/user/usecase"
+	"socialmedia/user/domain"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -14,7 +15,7 @@ type ProfileUserRequest struct {
 }
 
 type ProfileUserResponse struct {
-	Message string `json:"message"`
+	User domain.User
 }
 
 func NewProfileUserHandler(usecase usecase.ProfileUseCase) *ProfileUserHandler {
@@ -22,9 +23,9 @@ func NewProfileUserHandler(usecase usecase.ProfileUseCase) *ProfileUserHandler {
 }
 
 func (h *ProfileUserHandler) Handle(fbrCtx *fiber.Ctx, ctx context.Context, req *ProfileUserRequest) (*ProfileUserResponse, error) {
-	err := h.usecase.Execute(fbrCtx, ctx)
+	user, err := h.usecase.Execute(fbrCtx, ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &ProfileUserResponse{Message: "get user profile runnig"}, nil
+	return &ProfileUserResponse{User: *user}, nil
 }

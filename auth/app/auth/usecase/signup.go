@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"socialmedia/auth/domain"
 	"socialmedia/shared/messaging"
+
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -32,6 +33,7 @@ func NewSignUpUseCase(repository Repository, rabbitMQ RabbitMQ, jwtHelper JwtHel
 }
 
 func (u *signUpUseCase) Execute(ctx context.Context, req *SignUpRequest) (*string, error) {
+
 	activationCode := generateActivationCode()
 
 	auth := &domain.Auth{

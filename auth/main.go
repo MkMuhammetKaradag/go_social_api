@@ -34,7 +34,7 @@ func main() {
 
 	signUpUseCase := usecase.NewSignUpUseCase(repo, rabbitMQ, jwtHelper)
 	forgotPasswordUseCase := usecase.NewForgotPasswordUseCase(repo, rabbitMQ)
-	activateUseCase := usecase.NewActivateUseCase(repo, jwtHelper)
+	activateUseCase := usecase.NewActivateUseCase(repo, jwtHelper, rabbitMQ)
 	signInUseCase := usecase.NewSignInUseCase(repo, redisRepo)
 	logoutUseCase := usecase.NewLogoutUseCase(redisRepo)
 	resetPasswordUseCase := usecase.NewResetPasswordUseCase(repo, redisRepo)

@@ -3,7 +3,7 @@ package initializer
 import (
 	"fmt"
 	"log"
-	"socialmedia/auth/infra/postgres"
+	"socialmedia/user/infra/postgres"
 	"socialmedia/user/pkg/config"
 )
 

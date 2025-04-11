@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"socialmedia/shared/messaging"
 	"socialmedia/shared/middlewares"
 	user "socialmedia/user/app/user/handler"
 	"socialmedia/user/app/user/usecase"
@@ -22,13 +23,48 @@ func main() {
 	defer zap.L().Sync()
 	zap.L().Info("app starting...", zap.String("app name", appConfig.App.Name))
 	repo := initializer.InitDatabase(appConfig)
-
-	fmt.Println(repo)
 	redisRepo := initializer.InitRedis(appConfig)
-	rabbitMQ := initializer.InitMessaging()
+
+	createUserUseCase := usecase.NewCreateUserUseCase(repo)
+	createUserHandler := user.NewCreatedUserHandler(createUserUseCase)
+
+	messageRouter := func(msg messaging.Message) error {
+
+		// fmt.Println("mesage geldi main:", msg.Type)
+		switch msg.Type {
+		case messaging.UserTypes.UserCreated:
+			// fmt.Println("case gitrdi created")
+			err := createUserHandler.Handle(msg)
+			fmt.Println("hata:", err)
+			return err
+
+		default:
+			return nil
+		}
+	}
+
+	rabbitMQ := initializer.InitMessaging(messageRouter)
 	defer rabbitMQ.Close()
 
-	profileUseCase := usecase.NewProfileUseCase(redisRepo)
+	// go func() {
+
+	// err := rabbitMQ.ConsumeMessages(func(msg messaging.Message) error {
+
+	// 	if msg.Type == messaging.UserTypes.UserCreated {
+	// 		fmt.Println("user_creat geldi")
+	// 		return createUserHandler.Handle(msg)
+	// 	}
+	// 	return nil
+
+	// })
+	// if err != nil {
+	// 	log.Fatal("Mesaj dinleyici başlatılamadı:", err)
+	// }
+
+	// }()
+
+	profileUseCase := usecase.NewProfileUseCase(redisRepo, repo)
+
 	profileUserHandler := user.NewProfileUserHandler(profileUseCase)
 
 	serverConfig := server.Config{
