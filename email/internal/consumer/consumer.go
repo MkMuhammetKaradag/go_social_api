@@ -13,7 +13,7 @@ type EmailData struct {
 
 func StartEmailConsumer(handler func(messaging.Message) error) (*messaging.RabbitMQ, error) {
 	messageConfig := messaging.NewDefaultConfig()
-
+	// messageConfig.RetryTypes = []messaging.MessageType{messaging.UserTypes.UserCreated}
 	rabbit, err := messaging.NewRabbitMQ(messageConfig, messaging.EmailService)
 	if err != nil {
 		log.Fatal("RabbitMQ bağlantı hatası:", err)

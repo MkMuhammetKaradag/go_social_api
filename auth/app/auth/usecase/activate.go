@@ -23,6 +23,21 @@ func NewActivateUseCase(repository Repository, jwtHelper JwtHelper, rabbitMQ Rab
 }
 
 func (u *activateUseCase) Execute(ctx context.Context, activationToken, activationCode string) (*domain.AuthResponse, error) {
+	// userCreatedMessage := messaging.Message{
+	// 	Type:       messaging.UserTypes.UserCreated,
+	// 	ToService:  messaging.UserService,
+	// 	RetryCount: 0,
+	// 	Data: map[string]interface{}{
+	// 		"id":       "f2c8f899-a358-4805-a8b0-2134e4d68189",
+	// 		"email":    "karadag",
+	// 		"username": "karadag",
+	// 	},
+	// }
+
+	// if err := u.rabbitMQ.PublishMessage(context.Background(), userCreatedMessage); err != nil {
+	// 	// log.Printf("User creation message could not be sent: %v", err)
+	// 	return nil, err
+	// }
 
 	claims, err := u.jwtHelper.VerifyToken(activationToken)
 	if err != nil {
@@ -59,6 +74,10 @@ func (u *activateUseCase) Execute(ctx context.Context, activationToken, activati
 		// log.Printf("User creation message could not be sent: %v", err)
 		return nil, err
 	}
-
+	// response := &domain.AuthResponse{
+	// 	ID:       "auth.ID",
+	// 	Username: "asas",
+	// 	Email:    "sadsadasd",
+	// }
 	return response, nil
 }

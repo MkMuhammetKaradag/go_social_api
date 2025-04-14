@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"socialmedia/auth/pkg/graceful"
@@ -29,6 +30,10 @@ func main() {
 			return activationHandler.HandleEmail(msg)
 		case messaging.EmailTypes.ForgotPassword:
 			return passwordResetHandler.HandleEmail(msg)
+		case messaging.UserTypes.UserCreated:
+			fmt.Println("email servisi user created geldi")
+			return nil
+
 		default:
 			return nil
 		}

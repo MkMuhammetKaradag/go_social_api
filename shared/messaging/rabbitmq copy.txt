@@ -305,7 +305,6 @@ func (r *RabbitMQ) setupExchanges(ch *amqp.Channel, serviceType ServiceType) err
 func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 	queueName := string(r.service) + ".queue"
 
-	// Ana kuyruk tanımlama
 	q, err := r.channel.QueueDeclare(
 		queueName,
 		r.config.QueueDurable,
@@ -320,19 +319,17 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 		return &MessagingError{Code: "QUEUE_FAILED", Message: "Failed to declare queue", Err: err}
 	}
 
-	// Broadcast mesajlar için genel exchange'e bağlan
 	err = r.channel.QueueBind(
 		q.Name,
 		"",
+		// string(r.service),
 		r.config.ExchangeName,
 		false,
 		nil,
 	)
 	if err != nil {
-		return &MessagingError{Code: "BIND_FAILED", Message: "Failed to bind queue to broadcast exchange", Err: err}
+		return &MessagingError{Code: "BIND_FAILED", Message: "Failed to bind queue", Err: err}
 	}
-
-	// Servise özel mesajlar için direct exchange'e bağlan
 	serviceExchangeName := fmt.Sprintf("microservices.%s.service", string(r.service))
 	err = r.channel.QueueBind(
 		q.Name,
@@ -342,43 +339,9 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 		nil,
 	)
 	if err != nil {
-		return &MessagingError{Code: "BIND_FAILED", Message: "Failed to bind queue to service exchange", Err: err}
+		return &MessagingError{Code: "BIND_FAILED", Message: "Failed to bind queue", Err: err}
 	}
 
-	// Retry kuyruğunu da deklare et ve bağla
-	if r.config.EnableRetry {
-		retryQueueName := string(r.service) + ".retry.queue"
-
-		// Retry kuyruğunu tanımla
-		_, err = r.channel.QueueDeclare(
-			retryQueueName,
-			true,
-			false,
-			false,
-			false,
-			amqp.Table{
-				"x-dead-letter-exchange":    serviceExchangeName, // Direkt servise gönder
-				"x-dead-letter-routing-key": "",                  // Direct exchange için boş routing key
-			},
-		)
-		if err != nil {
-			return &MessagingError{Code: "RETRY_QUEUE_FAILED", Message: "Failed to declare retry queue", Err: err}
-		}
-
-		// Retry kuyruğunu servis adına göre bağla
-		err = r.channel.QueueBind(
-			retryQueueName,
-			string(r.service), // Sadece bu servis için olan retry mesajlarını al
-			r.config.RetryExchangeName,
-			false,
-			nil,
-		)
-		if err != nil {
-			return &MessagingError{Code: "RETRY_BIND_FAILED", Message: "Failed to bind retry queue", Err: err}
-		}
-	}
-
-	// Ana kuyruğu dinle
 	msgs, err := r.channel.Consume(
 		q.Name,
 		"",
@@ -391,7 +354,19 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 	if err != nil {
 		return &MessagingError{Code: "CONSUME_FAILED", Message: "Failed to start consuming", Err: err}
 	}
-
+	// retryQueueName := string(r.service) + ".retry.queue"
+	// retryMsgs, err := r.channel.Consume(
+	// 	retryQueueName,
+	// 	"",
+	// 	false,
+	// 	false,
+	// 	false,
+	// 	false,
+	// 	nil,
+	// )
+	// if err != nil {
+	// 	log.Printf("Retry kuyruğu dinleme hatası: %v", err)
+	// } else {
 	go func() {
 		for msg := range msgs {
 			var message Message
@@ -400,20 +375,11 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 				msg.Nack(false, false) // DLQ'ya gönder
 				continue
 			}
-
-			// Mesaj bu servise ait değilse işleme
-			if message.ToService != "" && message.ToService != r.service {
-				log.Printf("Bu mesaj %s servisi için, atlıyoruz: %s", message.ToService, message.ID)
-				msg.Ack(false) // Mesajı kabul et ama işleme
-				continue
-			}
-
 			if isCriticalMessageType(message.Type) {
-				message.Critical = false
+				message.Critical = true
 			}
-
-			log.Printf("Processing message [ID: %s, Type: %s, RetryCount: %d, ToService: %s]",
-				message.ID, message.Type, message.RetryCount, message.ToService)
+			log.Printf("Processing message [ID: %s, Type: %s, RetryCount: %d]",
+				message.ID, message.Type, message.RetryCount)
 
 			err := handler(message)
 
@@ -437,7 +403,7 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 			}
 		}
 	}()
-
+	// }
 	return nil
 }
 
@@ -470,28 +436,29 @@ func (r *RabbitMQ) handleRetry(msg *Message) {
 	// Retry sayısını artır
 	msg.RetryCount++
 
-	// Retry delay hesapla
-	retryDelay := 5000 * msg.RetryCount
+	// 5 saniye * retry sayısı kadar bekle (örn: 1. retry için 5sn, 2. için 10sn)
+	retryDelay := 5000 * msg.RetryCount // 5000ms = 5sn
 
 	body, err := json.Marshal(msg)
 	if err != nil {
 		log.Printf("handleRetry marshal error: %v", err)
 		return
 	}
-
-	// Hedef servis routing key olarak kullanılmalı
-	routingKey := string(msg.ToService)
-	if routingKey == "" {
-		// Eğer belirli bir servis hedefi yoksa, current service'i kullan
+	var routingKey string
+	if msg.ToService != "" {
+		// Belirli bir servis için retry
+		routingKey = string(msg.ToService)
+	} else {
+		// Broadcast mesajlar için servis adını kullan
 		routingKey = string(r.service)
 	}
 
-	log.Printf("Retry mesajı gönderiliyor. ID: %s, ToService: %s, RoutingKey: %s",
-		msg.ID, msg.ToService, routingKey)
+	log.Printf("Mesaj retry kuyruğuna gönderiliyor. ToService: %s, RoutingKey: %s",
+		msg.ToService, routingKey)
 
 	err = r.channel.Publish(
-		r.config.RetryExchangeName,
-		routingKey, // Önemli: Mesajın sadece hedef servise gitmesi için routing key
+		r.config.RetryExchangeName, // retry exchange
+		routingKey,                 // Tek routing key kullan
 		false,
 		false,
 		amqp.Publishing{
@@ -501,44 +468,43 @@ func (r *RabbitMQ) handleRetry(msg *Message) {
 			Timestamp:    time.Now(),
 			DeliveryMode: 2,
 			Headers:      amqp.Table(msg.Headers),
-			Expiration:   fmt.Sprintf("%d", retryDelay),
+			Expiration:   fmt.Sprintf("%d", retryDelay), // Mesaja özel TTL süresi
 		},
 	)
 
 	if err != nil {
 		log.Printf("handleRetry publish error: %v", err)
 	} else {
-		log.Printf("Mesaj %s için retry kuyruğuna %d saniye gecikmeyle gönderildi",
-			routingKey, retryDelay/1000)
+		log.Printf("Message sent to retry queue with delay of %d seconds", retryDelay/1000)
 	}
 }
+
 func (r *RabbitMQ) handleCriticalMessageRetry(msg *Message) {
-	// Retry sayısını artır
+	// Retry sayısını artır (sınırsız retry için kullanılabilir)
 	msg.RetryCount++
 
 	// Üstel artışla bekleme süresi (backoff strategy)
-	retryDelay := int(math.Min(float64(1000*math.Pow(2, float64(msg.RetryCount))), 10000))
+	retryDelay := int(math.Min(float64(1000*math.Pow(2, float64(msg.RetryCount))), 10000)) // Max 3 saniye
 
 	body, err := json.Marshal(msg)
 	if err != nil {
 		log.Printf("handleCriticalMessageRetry marshal error: %v", err)
+		// Kritik mesajları kaybetmemek için persistente kaydet
 		r.saveCriticalMessageToStorage(msg)
 		return
 	}
-
-	// Hedef servis routing key olarak kullanılmalı
-	routingKey := string(msg.ToService)
-	if routingKey == "" {
-		// Eğer belirli bir servis hedefi yoksa, current service'i kullan
+	var routingKey string
+	if msg.ToService == "" {
+		// Broadcast mesajlar için özel bir routing key kullan
 		routingKey = string(r.service)
+	} else {
+		routingKey = string(msg.ToService)
 	}
 
-	log.Printf("Kritik retry mesajı gönderiliyor. ID: %s, ToService: %s, RoutingKey: %s",
-		msg.ID, msg.ToService, routingKey)
-
+	fmt.Println(routingKey)
 	err = r.channel.Publish(
 		r.config.RetryExchangeName,
-		routingKey, // Önemli: Mesajın sadece hedef servise gitmesi için routing key
+		string(msg.ToService),
 		false,
 		false,
 		amqp.Publishing{
@@ -554,10 +520,10 @@ func (r *RabbitMQ) handleCriticalMessageRetry(msg *Message) {
 
 	if err != nil {
 		log.Printf("handleCriticalMessageRetry publish error: %v", err)
+		// Hata durumunda persistente kaydet
 		r.saveCriticalMessageToStorage(msg)
 	} else {
-		log.Printf("Kritik mesaj %s için retry kuyruğuna %d saniye gecikmeyle gönderildi",
-			routingKey, retryDelay/1000)
+		log.Printf("Critical message sent to retry queue with delay of %d seconds", retryDelay/1000)
 	}
 }
 
