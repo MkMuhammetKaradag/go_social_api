@@ -14,6 +14,7 @@ type Message struct {
 	RetryCount  int         `json:"retry_count"`  // Number of retry attempts
 	Priority    int         `json:"priority"`     // Message priority (0-9)
 	Headers     Headers     `json:"headers"`      // Custom message headers
+	Critical    bool        `json:"critical"`
 }
 
 type Headers map[string]interface{}

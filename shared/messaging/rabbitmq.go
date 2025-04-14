@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
+	"os"
 	"sync"
 	"time"
 
@@ -42,6 +44,15 @@ func NewRabbitMQ(config Config, serviceType ServiceType) (*RabbitMQ, error) {
 	go r.monitorConnection(serviceType)
 
 	return r, nil
+}
+func isCriticalMessageType(msgType MessageType) bool {
+	criticalTypes := []MessageType{UserTypes.UserCreated}
+	for _, t := range criticalTypes {
+		if t == msgType {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *RabbitMQ) connect(serviceType ServiceType) error {
@@ -103,7 +114,6 @@ func (r *RabbitMQ) PublishMessage(ctx context.Context, msg Message) error {
 	if msg.ToService != "" {
 
 		serviceExchangeName := fmt.Sprintf("microservices.%s.service", msg.ToService)
-		// fmt.Println(serviceExchangeName)
 		return r.channel.PublishWithContext(ctx,
 			serviceExchangeName,
 			"",
@@ -348,7 +358,9 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 				msg.Nack(false, false) // DLQ'ya gönder
 				continue
 			}
-
+			if isCriticalMessageType(message.Type) {
+				message.Critical = true
+			}
 			log.Printf("Processing message [ID: %s, Type: %s, RetryCount: %d]",
 				message.ID, message.Type, message.RetryCount)
 
@@ -356,8 +368,11 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 
 			if err != nil {
 				log.Printf("Message processing failed: %v", err)
-
-				if r.shouldRetry(message) {
+				if message.Critical {
+					// Kritik mesajlar için retry sayısını dikkate almadan tekrar dene
+					r.handleCriticalMessageRetry(&message)
+					msg.Ack(false) // Orijinal mesajı kabul et
+				} else if r.shouldRetry(message) {
 					log.Printf("Scheduling retry for message ID: %s", message.ID)
 					r.handleRetry(&message)
 					msg.Ack(false) // Orijinal mesajı kabul et, retry kuyruğunda yeni bir kopya var
@@ -375,33 +390,33 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 	return nil
 }
 
-func (r *RabbitMQ) ConsumeDLQ(handler MessageHandler) error {
-	msgs, err := r.channel.Consume(
-		DLQName,
-		"",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
+// func (r *RabbitMQ) ConsumeDLQ(handler MessageHandler) error {
+// 	msgs, err := r.channel.Consume(
+// 		DLQName,
+// 		"",
+// 		true,
+// 		false,
+// 		false,
+// 		false,
+// 		nil,
+// 	)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	go func() {
-		for msg := range msgs {
-			var message Message
-			if err := json.Unmarshal(msg.Body, &message); err != nil {
-				log.Printf("DLQ Message Unmarshal Error: %v", err)
-				continue
-			}
-			log.Println("DLQ'dan mesaj alındı:", message)
-			_ = handler(message)
-		}
-	}()
-	return nil
-}
+//		go func() {
+//			for msg := range msgs {
+//				var message Message
+//				if err := json.Unmarshal(msg.Body, &message); err != nil {
+//					log.Printf("DLQ Message Unmarshal Error: %v", err)
+//					continue
+//				}
+//				log.Println("DLQ'dan mesaj alındı:", message)
+//				_ = handler(message)
+//			}
+//		}()
+//		return nil
+//	}
 func (r *RabbitMQ) shouldRetry(msg Message) bool {
 	// Retry özelliği aktif değilse, hiç deneme yapma
 	if !r.config.EnableRetry {
@@ -461,4 +476,117 @@ func (r *RabbitMQ) handleRetry(msg *Message) {
 	} else {
 		log.Printf("Message sent to retry queue with delay of %d seconds", retryDelay/1000)
 	}
+}
+
+func (r *RabbitMQ) handleCriticalMessageRetry(msg *Message) {
+	// Retry sayısını artır (sınırsız retry için kullanılabilir)
+	msg.RetryCount++
+
+	// Üstel artışla bekleme süresi (backoff strategy)
+	retryDelay := int(math.Min(float64(1000*math.Pow(2, float64(msg.RetryCount))), 30000)) // Max 30 saniye
+
+	body, err := json.Marshal(msg)
+	if err != nil {
+		log.Printf("handleCriticalMessageRetry marshal error: %v", err)
+		// Kritik mesajları kaybetmemek için persistente kaydet
+		r.saveCriticalMessageToStorage(msg)
+		return
+	}
+
+	err = r.channel.Publish(
+		r.config.RetryExchangeName,
+		string(msg.ToService),
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         body,
+			MessageId:    msg.ID,
+			Timestamp:    time.Now(),
+			DeliveryMode: 2, // Persistent
+			Headers:      amqp.Table(msg.Headers),
+			Expiration:   fmt.Sprintf("%d", retryDelay),
+		},
+	)
+
+	if err != nil {
+		log.Printf("handleCriticalMessageRetry publish error: %v", err)
+		// Hata durumunda persistente kaydet
+		r.saveCriticalMessageToStorage(msg)
+	} else {
+		log.Printf("Critical message sent to retry queue with delay of %d seconds", retryDelay/1000)
+	}
+}
+
+// Kritik mesajları kalıcı depolamaya kaydetme fonksiyonu
+func (r *RabbitMQ) saveCriticalMessageToStorage(msg *Message) {
+	// Bu kısımda mesajı dosyaya, veritabanına veya başka bir kalıcı depolama alanına kaydedebilirsiniz
+	// Örnek olarak:
+	data, _ := json.Marshal(msg)
+	filename := fmt.Sprintf("critical_messages/%s_%s.json", msg.Type, msg.ID)
+
+	// Dosya işlemleri güvenlik için hata kontrolü ile yapılmalı
+	if err := os.MkdirAll("critical_messages", 0755); err != nil {
+		log.Printf("Failed to create directory for critical messages: %v", err)
+	}
+
+	if err := os.WriteFile(filename, data, 0644); err != nil {
+		log.Printf("Failed to save critical message to storage: %v", err)
+	} else {
+		log.Printf("Critical message saved to %s", filename)
+	}
+}
+func (r *RabbitMQ) ConsumeDLQWithRecovery(handler MessageHandler) error {
+	msgs, err := r.channel.Consume(
+		DLQName,
+		"",
+		false, // Manual ack mode
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for msg := range msgs {
+			var message Message
+			if err := json.Unmarshal(msg.Body, &message); err != nil {
+				log.Printf("DLQ Message Unmarshal Error: %v", err)
+				msg.Ack(false) // Bu mesajı atlayalım
+				continue
+			}
+
+			log.Println("DLQ'dan mesaj alındı:", message)
+
+			// Kritik mesajları tekrar işlemeye gönder
+			if isCriticalMessageType(message.Type) {
+				log.Printf("Critical message found in DLQ, recovering: %s", message.ID)
+				message.Critical = true
+				message.RetryCount = 0 // Reset retry count for fresh attempts
+
+				// Mesajı tekrar ana kuyruğa gönder
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+
+				if err := r.PublishMessage(ctx, message); err != nil {
+					log.Printf("Failed to recover critical message from DLQ: %v", err)
+					// Mesajı kabul etme, DLQ'da kalsın
+					msg.Nack(false, true)
+					// Kritik mesaj kalıcı depolamaya da kaydedilebilir
+					r.saveCriticalMessageToStorage(&message)
+				} else {
+					log.Printf("Successfully recovered critical message from DLQ: %s", message.ID)
+					msg.Ack(false)
+				}
+			} else {
+				// Kritik olmayan mesajlar için normal işleme
+				_ = handler(message)
+				msg.Ack(false)
+			}
+		}
+	}()
+	return nil
 }

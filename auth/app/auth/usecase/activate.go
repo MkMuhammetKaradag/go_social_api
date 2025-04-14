@@ -23,6 +23,7 @@ func NewActivateUseCase(repository Repository, jwtHelper JwtHelper, rabbitMQ Rab
 }
 
 func (u *activateUseCase) Execute(ctx context.Context, activationToken, activationCode string) (*domain.AuthResponse, error) {
+
 	claims, err := u.jwtHelper.VerifyToken(activationToken)
 	if err != nil {
 		return nil, fmt.Errorf("error verifying token: %w", err)

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"socialmedia/shared/messaging"
 	"socialmedia/shared/middlewares"
@@ -35,7 +34,7 @@ func main() {
 		case messaging.UserTypes.UserCreated:
 			// fmt.Println("case gitrdi created")
 			err := createUserHandler.Handle(msg)
-			fmt.Println("hata:", err)
+
 			return err
 
 		default:
