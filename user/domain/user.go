@@ -15,3 +15,11 @@ type User struct {
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 }
+type UserUpdate struct {
+	// ID        uuid.UUID
+	Bio       *string `json:"bio,omitempty"`
+	AvatarURL *string `json:"avatar_url,omitempty"`
+	Location  *string `json:"location,omitempty"`
+	Website   *string `json:"website,omitempty"`
+	IsPrivate *bool   `json:"is_private,omitempty"`
+}

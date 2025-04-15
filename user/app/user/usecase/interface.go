@@ -14,6 +14,9 @@ type ProfileUseCase interface {
 type CreateUserUseCase interface {
 	Execute(ctx context.Context, userID, userName, email string) error
 }
+type UpdateUserUseCase interface {
+	Execute(fbrCtx *fiber.Ctx, ctx context.Context, updateuser domain.UserUpdate) error
+}
 
 type RabbitMQ interface {
 	PublishMessage(ctx context.Context, msg messaging.Message) error
@@ -21,6 +24,7 @@ type RabbitMQ interface {
 type Repository interface {
 	GetUserProfile(ctx context.Context, identifier string) (*domain.User, error)
 	CreateUser(ctx context.Context, id, username, email string) error
+	UpdateUser(ctx context.Context, userID string, update domain.UserUpdate) error
 }
 
 type RedisRepository interface {

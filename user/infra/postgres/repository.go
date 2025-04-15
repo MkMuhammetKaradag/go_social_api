@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"socialmedia/user/domain"
+	"strings"
 
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
@@ -55,18 +56,6 @@ func (r *Repository) GetUserProfile(ctx context.Context, identifier string) (*do
 		query = `SELECT id, username, email, bio, avatar_url, is_private, created_at, updated_at FROM users WHERE username = $1 OR email = $1`
 		row = r.db.QueryRowContext(ctx, query, identifier)
 	}
-	// const query = `
-	// 	SELECT
-	// 		id,
-	// 		username,
-	// 		email,
-	// 		bio,
-	// 		avatar_url,
-	// 		is_private,
-	// 		created_at,
-	// 	 	updated_at
-	// 	FROM users
-	// 	WHERE (username = $1 OR email = $1 OR id = $1)`
 
 	var user domain.User
 	err := row.Scan(
@@ -91,7 +80,7 @@ func (r *Repository) GetUserProfile(ctx context.Context, identifier string) (*do
 }
 
 func (r *Repository) CreateUser(ctx context.Context, id, username, email string) error {
-	
+
 	query := `
 		INSERT INTO users (id, username, email)
 		VALUES ($1, $2, $3)
@@ -100,5 +89,71 @@ func (r *Repository) CreateUser(ctx context.Context, id, username, email string)
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
+	return nil
+}
+func (r *Repository) UpdateUser(ctx context.Context, userID string, update domain.UserUpdate) error {
+	setClauses := []string{}
+	args := []interface{}{}
+	argPos := 1
+
+	if update.Bio != nil {
+		setClauses = append(setClauses, fmt.Sprintf("bio = $%d", argPos))
+		args = append(args, *update.Bio)
+		argPos++
+	}
+	if update.AvatarURL != nil {
+		setClauses = append(setClauses, fmt.Sprintf("avatar_url = $%d", argPos))
+		args = append(args, *update.AvatarURL)
+		argPos++
+	}
+	if update.Location != nil {
+		setClauses = append(setClauses, fmt.Sprintf("location = $%d", argPos))
+		args = append(args, *update.Location)
+		argPos++
+	}
+	if update.Website != nil {
+		setClauses = append(setClauses, fmt.Sprintf("website = $%d", argPos))
+		args = append(args, *update.Website)
+		argPos++
+	}
+	if update.IsPrivate != nil {
+		setClauses = append(setClauses, fmt.Sprintf("is_private = $%d", argPos))
+		args = append(args, *update.IsPrivate)
+		argPos++
+	}
+
+	// Eğer hiçbir alan gönderilmemişse, boş update yapma:
+	if len(setClauses) == 0 {
+		return errors.New("no fields to update")
+	}
+
+	// updated_at alanını da güncelleyelim:
+	setClauses = append(setClauses, fmt.Sprintf("updated_at = CURRENT_TIMESTAMP"))
+
+	// WHERE id = $N
+	query := fmt.Sprintf(`
+		UPDATE users
+		SET %s
+		WHERE id = $%d
+	`,
+		strings.Join(setClauses, ", "),
+		argPos,
+	)
+
+	args = append(args, userID)
+
+	res, err := r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+	if rowsAffected == 0 {
+		return ErrUserNotFound
+	}
+
 	return nil
 }

@@ -45,26 +45,10 @@ func main() {
 	rabbitMQ := initializer.InitMessaging(messageRouter)
 	defer rabbitMQ.Close()
 
-	// go func() {
-
-	// err := rabbitMQ.ConsumeMessages(func(msg messaging.Message) error {
-
-	// 	if msg.Type == messaging.UserTypes.UserCreated {
-	// 		fmt.Println("user_creat geldi")
-	// 		return createUserHandler.Handle(msg)
-	// 	}
-	// 	return nil
-
-	// })
-	// if err != nil {
-	// 	log.Fatal("Mesaj dinleyici başlatılamadı:", err)
-	// }
-
-	// }()
-
 	profileUseCase := usecase.NewProfileUseCase(redisRepo, repo)
-
+	updateUserUseCase := usecase.NewUpdateUserUseCase(redisRepo, repo)
 	profileUserHandler := user.NewProfileUserHandler(profileUseCase)
+	updateUserHandler := user.NewUpdateUserHandler(updateUserUseCase)
 
 	serverConfig := server.Config{
 		Port:         appConfig.Server.Port,
@@ -82,6 +66,7 @@ func main() {
 	protected := app.Group("/", authMiddleware.Authenticate())
 	{
 		protected.Get("/profile", handler.HandleWithFiber[user.ProfileUserRequest, user.ProfileUserResponse](profileUserHandler))
+		protected.Post("/update", handler.HandleWithFiber[user.UpdateUserRequest, user.UpdateUserResponse](updateUserHandler))
 
 	}
 
