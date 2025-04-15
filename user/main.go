@@ -47,8 +47,11 @@ func main() {
 
 	profileUseCase := usecase.NewProfileUseCase(redisRepo, repo)
 	updateUserUseCase := usecase.NewUpdateUserUseCase(redisRepo, repo)
+	getUserUseCase := usecase.NewGetUserUseCase(redisRepo, repo)
+
 	profileUserHandler := user.NewProfileUserHandler(profileUseCase)
 	updateUserHandler := user.NewUpdateUserHandler(updateUserUseCase)
+	getUserHandler := user.NewGetUserHandler(getUserUseCase)
 
 	serverConfig := server.Config{
 		Port:         appConfig.Server.Port,
@@ -67,6 +70,7 @@ func main() {
 	{
 		protected.Get("/profile", handler.HandleWithFiber[user.ProfileUserRequest, user.ProfileUserResponse](profileUserHandler))
 		protected.Post("/update", handler.HandleWithFiber[user.UpdateUserRequest, user.UpdateUserResponse](updateUserHandler))
+		protected.Get("/:id", handler.HandleWithFiber[user.GetUserRequest, user.GetUserResponse](getUserHandler))
 
 	}
 

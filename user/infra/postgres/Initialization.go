@@ -14,6 +14,7 @@ const (
   email VARCHAR(100) UNIQUE NOT NULL,
   bio TEXT,
   avatar_url TEXT,
+  banner_url TEXT,
    location VARCHAR(100),
    website VARCHAR(200),
   is_private BOOLEAN DEFAULT false,

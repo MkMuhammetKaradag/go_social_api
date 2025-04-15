@@ -4,8 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	// "errors"
-	// "fmt"
+
 	"socialmedia/auth/domain"
 	"socialmedia/shared/messaging"
 )
@@ -30,9 +29,9 @@ func (u *activateUseCase) Execute(ctx context.Context, activationToken, activati
 	// 	ToServices: []messaging.ServiceType{messaging.UserService, messaging.EmailService},
 	// 	RetryCount: 0,
 	// 	Data: map[string]interface{}{
-	// 		"id":       "f2c8f899-a358-4805-a8b0-2134e4d68189",
-	// 		"email":    "karadag",
-	// 		"username": "karadag",
+	// 		"id":       "a369d39c-eb8a-4da1-ae60-9cc585256286",
+	// 		"email":    "test@mail.com",
+	// 		"username": "username",
 	// 	},
 	// }
 

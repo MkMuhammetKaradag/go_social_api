@@ -91,6 +91,29 @@ func (r *Repository) CreateUser(ctx context.Context, id, username, email string)
 	}
 	return nil
 }
+
+func (r *Repository) GetUser(ctx context.Context, currrentUserID, targetUserID uuid.UUID) (*domain.User, error) {
+	const query = `
+	SELECT 
+		id,
+		username,
+		CASE WHEN is_private AND id != $2 THEN NULL ELSE avatar_url END,
+		CASE WHEN is_private AND id != $2 THEN NULL ELSE banner_url END,
+		is_private
+	FROM users
+	WHERE id = $1
+`
+
+	row := r.db.QueryRowContext(ctx, query, targetUserID, currrentUserID)
+
+	var user domain.User
+	err := row.Scan(&user.ID, &user.Username, &user.AvatarURL, &user.BannerURL, &user.IsPrivate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return &user, nil
+}
 func (r *Repository) UpdateUser(ctx context.Context, userID string, update domain.UserUpdate) error {
 	setClauses := []string{}
 	args := []interface{}{}
@@ -104,6 +127,12 @@ func (r *Repository) UpdateUser(ctx context.Context, userID string, update domai
 	if update.AvatarURL != nil {
 		setClauses = append(setClauses, fmt.Sprintf("avatar_url = $%d", argPos))
 		args = append(args, *update.AvatarURL)
+		argPos++
+	}
+
+	if update.BannerURL != nil {
+		setClauses = append(setClauses, fmt.Sprintf("banner_url = $%d", argPos))
+		args = append(args, *update.BannerURL)
 		argPos++
 	}
 	if update.Location != nil {
