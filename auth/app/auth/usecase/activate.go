@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	// "errors"
+	// "fmt"
 	"socialmedia/auth/domain"
 	"socialmedia/shared/messaging"
 )
@@ -25,7 +27,7 @@ func NewActivateUseCase(repository Repository, jwtHelper JwtHelper, rabbitMQ Rab
 func (u *activateUseCase) Execute(ctx context.Context, activationToken, activationCode string) (*domain.AuthResponse, error) {
 	// userCreatedMessage := messaging.Message{
 	// 	Type:       messaging.UserTypes.UserCreated,
-	// 	ToService:  messaging.UserService,
+	// 	ToServices: []messaging.ServiceType{messaging.UserService, messaging.EmailService},
 	// 	RetryCount: 0,
 	// 	Data: map[string]interface{}{
 	// 		"id":       "f2c8f899-a358-4805-a8b0-2134e4d68189",
@@ -61,13 +63,13 @@ func (u *activateUseCase) Execute(ctx context.Context, activationToken, activati
 
 	userCreatedMessage := messaging.Message{
 		Type:       messaging.UserTypes.UserCreated,
-		ToService:  messaging.UserService,
-		RetryCount: 4,
+		ToServices: []messaging.ServiceType{messaging.UserService},
 		Data: map[string]interface{}{
 			"id":       response.ID,
 			"email":    response.Email,
 			"username": response.Username,
 		},
+		Critical: true,
 	}
 
 	if err := u.rabbitMQ.PublishMessage(context.Background(), userCreatedMessage); err != nil {

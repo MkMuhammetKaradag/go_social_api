@@ -4,6 +4,7 @@ var allowedMessageTypes = map[ServiceType][]MessageType{
 	EmailService: {
 		"active_user",
 		"forgot_password",
+		"user_created",
 	},
 	UserService: {
 		"user_created",

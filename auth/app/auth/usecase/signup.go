@@ -59,14 +59,15 @@ func (u *signUpUseCase) Execute(ctx context.Context, req *SignUpRequest) (*strin
 	}
 
 	emailMessage := messaging.Message{
-		Type:      messaging.EmailTypes.ActivateUser,
-		ToService: messaging.EmailService,
+		Type:       messaging.EmailTypes.ActivateUser,
+		ToServices: []messaging.ServiceType{messaging.EmailService},
 		Data: map[string]interface{}{
 			"email":           req.Email,
 			"activation_code": activationCode,
 			"template_name":   "activation_email.html",
 			"userName":        req.Username,
 		},
+		Critical: false,
 	}
 
 	if err := u.rabbitMQ.PublishMessage(ctx, emailMessage); err != nil {

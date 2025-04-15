@@ -98,27 +98,15 @@ func (r *RabbitMQ) PublishMessage(ctx context.Context, msg Message) error {
 
 	msg.FromService = r.service
 
-	if msg.ToService == r.service {
-		return &MessagingError{Code: "INVALID_TARGET", Message: "Service cannot send message to itself"}
-	}
-
-	body, err := json.Marshal(msg)
-	if err != nil {
-		return &MessagingError{Code: "MARSHAL_FAILED", Message: "Failed to marshal message", Err: err}
-	}
-	if msg.ToService != "" {
-
-		if !isAllowedMessageType(msg.ToService, msg.Type) {
-			return &MessagingError{
-				Code:    "INVALID_TYPE",
-				Message: fmt.Sprintf("Message type '%s' is not allowed for service '%s'", msg.Type, msg.ToService),
-			}
+	// ToServices boş ise broadcast için normal exchange kullan
+	if len(msg.ToServices) == 0 {
+		body, err := json.Marshal(msg)
+		if err != nil {
+			return &MessagingError{Code: "MARSHAL_FAILED", Message: "Failed to marshal message", Err: err}
 		}
 
-		serviceExchangeName := fmt.Sprintf("microservices.%s.service", msg.ToService)
-		fmt.Printf("Mesaj gönderiliyor: %s -> %s\n", r.service, msg.ToService)
 		return r.channel.PublishWithContext(ctx,
-			serviceExchangeName,
+			r.config.ExchangeName,
 			"",
 			true,
 			false,
@@ -133,21 +121,96 @@ func (r *RabbitMQ) PublishMessage(ctx context.Context, msg Message) error {
 			},
 		)
 	}
-	return r.channel.PublishWithContext(ctx,
-		r.config.ExchangeName,
-		"",
-		true,
-		false,
-		amqp.Publishing{
-			ContentType:  "application/json",
-			Body:         body,
-			MessageId:    msg.ID,
-			Timestamp:    msg.Created,
-			Priority:     uint8(msg.Priority),
-			Headers:      amqp.Table(msg.Headers),
-			DeliveryMode: 2,
-		},
-	)
+	// UserCreated gibi kritik mesaj tiplerini kontrol et
+	isCritical := isCriticalMessageType(msg.Type)
+	if isCritical {
+		msg.Critical = true
+	}
+	// Birden fazla servise gönderim için
+	var publishErrors []error
+	var successServices []ServiceType
+	// Her bir hedef servis için mesajı gönder
+	for _, toService := range msg.ToServices {
+		// Kendine mesaj göndermeyi engelle
+		if toService == r.service {
+			continue
+		}
+
+		// Bu mesaj tipi bu servis için izin veriliyor mu kontrol et
+		if !isAllowedMessageType(toService, msg.Type) {
+			publishErrors = append(publishErrors, &MessagingError{
+				Code:    "INVALID_TYPE",
+				Message: fmt.Sprintf("Message type '%s' is not allowed for service '%s'", msg.Type, toService),
+			})
+			continue
+		}
+
+		// Tek servis için mesaj kopyasını hazırla
+		singleMsg := msg
+		singleMsg.ToServices = []ServiceType{toService} // Sadece bu servisi hedefle
+
+		body, err := json.Marshal(singleMsg)
+		if err != nil {
+			publishErrors = append(publishErrors, &MessagingError{Code: "MARSHAL_FAILED", Message: "Failed to marshal message", Err: err})
+			continue
+		}
+
+		serviceExchangeName := fmt.Sprintf("microservices.%s.service", toService)
+		fmt.Printf("Mesaj gönderiliyor: %s -> %s\n", r.service, toService)
+
+		err = r.channel.PublishWithContext(ctx,
+			serviceExchangeName,
+			"",
+			true,  // Mandatory
+			false, // Immediate
+			amqp.Publishing{
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    msg.ID,
+				Timestamp:    msg.Created,
+				Priority:     uint8(msg.Priority),
+				Headers:      amqp.Table(msg.Headers),
+				DeliveryMode: 2, // Persistent
+			},
+		)
+
+		if err != nil {
+			publishErrors = append(publishErrors, err)
+
+			// Kritik mesajlar için özel işlem: hata durumunda kalıcı depolama
+			if isCritical {
+				singleMsg.ToServices = []ServiceType{toService} // Sadece başarısız servisi hedefle
+				r.saveCriticalMessageToStorage(&singleMsg)
+
+				// Kritik mesajlar için retry mekanizmasını da tetikle
+				r.handleCriticalMessageRetry(&singleMsg)
+			}
+		} else {
+			successServices = append(successServices, toService)
+		}
+	}
+
+	// Hata kontrolü
+	if len(publishErrors) > 0 {
+		// Bazı servislere başarılı gönderim varsa bunu logla
+		if len(successServices) > 0 {
+			log.Printf("Message sent successfully to services: %v", successServices)
+		}
+
+		// Tüm servislere gönderim başarısız oldu mu?
+		if len(successServices) == 0 {
+			// Hiçbir servise gönderilemediyse, birleşik hata mesajı döndür
+			errorMsg := fmt.Sprintf("Failed to publish message to any service: %v", publishErrors)
+			return &MessagingError{Code: "PUBLISH_FAILED", Message: errorMsg}
+		}
+
+		// Kısmi başarı durumunda: bazı servislere gönderildi, bazılarına gönderilmedi
+		log.Printf("Message partially sent. Errors: %v", publishErrors)
+		return nil
+	}
+
+	return nil
+
 }
 
 func (r *RabbitMQ) monitorConnection(serviceType ServiceType) {
@@ -402,18 +465,34 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 			}
 
 			// Mesaj bu servise ait değilse işleme
-			if message.ToService != "" && message.ToService != r.service {
-				log.Printf("Bu mesaj %s servisi için, atlıyoruz: %s", message.ToService, message.ID)
-				msg.Ack(false) // Mesajı kabul et ama işleme
-				continue
-			}
+			// if message.ToService != "" && message.ToService != r.service {
+			// 	log.Printf("Bu mesaj %s servisi için, atlıyoruz: %s", message.ToService, message.ID)
+			// 	msg.Ack(false) // Mesajı kabul et ama işleme
+			// 	continue
+			// }
 
+			if len(message.ToServices) > 0 {
+				isForThisService := false
+				for _, svc := range message.ToServices {
+					if svc == r.service {
+						isForThisService = true
+						break
+					}
+				}
+
+				if !isForThisService {
+					log.Printf("This message is for %v services, we skip it because this service (%s) is not in the list: %s",
+						message.ToServices, r.service, message.ID)
+					msg.Ack(false) // Mesajı kabul et ama işleme
+					continue
+				}
+			}
 			if isCriticalMessageType(message.Type) {
 				message.Critical = false
 			}
 
-			log.Printf("Processing message [ID: %s, Type: %s, RetryCount: %d, ToService: %s]",
-				message.ID, message.Type, message.RetryCount, message.ToService)
+			log.Printf("Processing message [ID: %s, Type: %s, RetryCount: %d, ToServices: %v]",
+				message.ID, message.Type, message.RetryCount, message.ToServices)
 
 			err := handler(message)
 
@@ -479,15 +558,16 @@ func (r *RabbitMQ) handleRetry(msg *Message) {
 		return
 	}
 
-	// Hedef servis routing key olarak kullanılmalı
-	routingKey := string(msg.ToService)
-	if routingKey == "" {
-		// Eğer belirli bir servis hedefi yoksa, current service'i kullan
+	// Tek bir servise retry yapılıyor varsayımıyla
+	var routingKey string
+	if len(msg.ToServices) > 0 {
+		routingKey = string(msg.ToServices[0])
+	} else {
 		routingKey = string(r.service)
 	}
 
-	log.Printf("Retry mesajı gönderiliyor. ID: %s, ToService: %s, RoutingKey: %s",
-		msg.ID, msg.ToService, routingKey)
+	log.Printf("Retry mesajı gönderiliyor. ID: %s, ToServices: %v, RoutingKey: %s",
+		msg.ID, msg.ToServices, routingKey)
 
 	err = r.channel.Publish(
 		r.config.RetryExchangeName,
@@ -508,7 +588,7 @@ func (r *RabbitMQ) handleRetry(msg *Message) {
 	if err != nil {
 		log.Printf("handleRetry publish error: %v", err)
 	} else {
-		log.Printf("Mesaj %s için retry kuyruğuna %d saniye gecikmeyle gönderildi",
+		log.Printf("Message sent to retry queue for %s with %d seconds delay",
 			routingKey, retryDelay/1000)
 	}
 }
@@ -517,7 +597,7 @@ func (r *RabbitMQ) handleCriticalMessageRetry(msg *Message) {
 	msg.RetryCount++
 
 	// Üstel artışla bekleme süresi (backoff strategy)
-	retryDelay := int(math.Min(float64(1000*math.Pow(2, float64(msg.RetryCount))), 10000))
+	retryDelay := int(math.Min(float64(1000*math.Pow(2, float64(msg.RetryCount))), 30000))
 
 	body, err := json.Marshal(msg)
 	if err != nil {
@@ -526,38 +606,39 @@ func (r *RabbitMQ) handleCriticalMessageRetry(msg *Message) {
 		return
 	}
 
-	// Hedef servis routing key olarak kullanılmalı
-	routingKey := string(msg.ToService)
-	if routingKey == "" {
-		// Eğer belirli bir servis hedefi yoksa, current service'i kullan
-		routingKey = string(r.service)
-	}
+	for _, toService := range msg.ToServices {
+		routingKey := string(toService)
 
-	log.Printf("Kritik retry mesajı gönderiliyor. ID: %s, ToService: %s, RoutingKey: %s",
-		msg.ID, msg.ToService, routingKey)
+		log.Printf("Kritik retry mesajı gönderiliyor. ID: %s, ToService: %s",
+			msg.ID, toService)
 
-	err = r.channel.Publish(
-		r.config.RetryExchangeName,
-		routingKey, // Önemli: Mesajın sadece hedef servise gitmesi için routing key
-		false,
-		false,
-		amqp.Publishing{
-			ContentType:  "application/json",
-			Body:         body,
-			MessageId:    msg.ID,
-			Timestamp:    time.Now(),
-			DeliveryMode: 2, // Persistent
-			Headers:      amqp.Table(msg.Headers),
-			Expiration:   fmt.Sprintf("%d", retryDelay),
-		},
-	)
+		err = r.channel.Publish(
+			r.config.RetryExchangeName,
+			routingKey,
+			false,
+			false,
+			amqp.Publishing{
+				ContentType:  "application/json",
+				Body:         body,
+				MessageId:    msg.ID,
+				Timestamp:    time.Now(),
+				DeliveryMode: 2, // Persistent
+				Headers:      amqp.Table(msg.Headers),
+				Expiration:   fmt.Sprintf("%d", retryDelay),
+			},
+		)
 
-	if err != nil {
-		log.Printf("handleCriticalMessageRetry publish error: %v", err)
-		r.saveCriticalMessageToStorage(msg)
-	} else {
-		log.Printf("Kritik mesaj %s için retry kuyruğuna %d saniye gecikmeyle gönderildi",
-			routingKey, retryDelay/1000)
+		if err != nil {
+			log.Printf("handleCriticalMessageRetry publish error for service %s: %v", toService, err)
+
+			// Tek servisi hedefleyen bir mesaj oluştur ve depola
+			singleMsg := *msg
+			singleMsg.ToServices = []ServiceType{toService}
+			r.saveCriticalMessageToStorage(&singleMsg)
+		} else {
+			log.Printf("Kritik mesaj %s servisi için retry kuyruğuna %d saniye gecikmeyle gönderildi",
+				toService, retryDelay/1000)
+		}
 	}
 }
 
