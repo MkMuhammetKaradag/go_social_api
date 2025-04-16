@@ -21,7 +21,7 @@ func NewFallowRequestUseCase(sessionRepo RedisRepository, repository Repository)
 	}
 }
 
-func (u *fallowRequestUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, FollowingID uuid.UUID) (string, error) {
+func (u *fallowRequestUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, followingID uuid.UUID) (string, error) {
 	userData, ok := middlewares.GetUserData(fbrCtx)
 	if !ok {
 		return "", domain.ErrNotFoundAuthorization
@@ -31,20 +31,27 @@ func (u *fallowRequestUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, F
 	if err != nil {
 		return "", err
 	}
+	hasBlock, err := u.repository.HasBlockRelationship(ctx, currrentUserID, followingID)
+	if err != nil {
+		return "", err
+	}
 
-	isPrivate, err := u.repository.IsPrivate(ctx, FollowingID)
+	if hasBlock {
+		return "", domain.ErrBlockedUser
+	}
+	isPrivate, err := u.repository.IsPrivate(ctx, followingID)
 	if err != nil {
 		return "", err
 	}
 
 	if isPrivate {
-		err = u.repository.CreateFollowRequest(ctx, currrentUserID, FollowingID)
+		err = u.repository.CreateFollowRequest(ctx, currrentUserID, followingID)
 		if err != nil {
 			return "", err
 		}
 		return "Follow request sent", nil
 	} else {
-		err = u.repository.CreateFollow(ctx, currrentUserID, FollowingID)
+		err = u.repository.CreateFollow(ctx, currrentUserID, followingID)
 		if err != nil {
 			return "", err
 		}

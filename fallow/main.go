@@ -45,8 +45,12 @@ func main() {
 	rabbitMQ := initializer.InitMessaging(messageRouter)
 	defer rabbitMQ.Close()
 
-	fallowUserUseCase := fallowUseCase.NewFallowRequestUseCase(redisRepo, repo)
-	fallawRequestHandler := fallow.NewFallowRequestHandler(fallowUserUseCase)
+	fallowRequestUseCase := fallowUseCase.NewFallowRequestUseCase(redisRepo, repo)
+	blockUserUseCase := fallowUseCase.NewBlockUserUseCase(redisRepo, repo)
+	unblockUserUseCase := fallowUseCase.NewUnblockUserUseCase(redisRepo, repo)
+	fallawRequestHandler := fallow.NewFallowRequestHandler(fallowRequestUseCase)
+	blockUserHandler := fallow.NewBlockUserHandler(blockUserUseCase)
+	unblockUserHandler := fallow.NewUnblockUserHandler(unblockUserUseCase)
 
 	serverConfig := server.Config{
 		Port:         appConfig.Server.Port,
@@ -64,6 +68,8 @@ func main() {
 	protected := app.Group("/", authMiddleware.Authenticate())
 	{
 		protected.Post("/fallow", handler.HandleWithFiber[fallow.FallowRequestRequest, fallow.FallowRequestResponse](fallawRequestHandler))
+		protected.Post("/block", handler.HandleWithFiber[fallow.BlockUserRequest, fallow.BlockUserResponse](blockUserHandler))
+		protected.Post("/unblock", handler.HandleWithFiber[fallow.UnblockUserRequest, fallow.UnblockUserResponse](unblockUserHandler))
 
 	}
 
