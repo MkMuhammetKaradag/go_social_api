@@ -26,11 +26,11 @@ func NewActivateUseCase(repository Repository, jwtHelper JwtHelper, rabbitMQ Rab
 func (u *activateUseCase) Execute(ctx context.Context, activationToken, activationCode string) (*domain.AuthResponse, error) {
 	// userCreatedMessage := messaging.Message{
 	// 	Type:       messaging.UserTypes.UserCreated,
-	// 	ToServices: []messaging.ServiceType{messaging.UserService, messaging.EmailService},
+	// 	ToServices: []messaging.ServiceType{messaging.UserService, messaging.FallowService},
 	// 	RetryCount: 0,
 	// 	Data: map[string]interface{}{
-	// 		"id":       "a369d39c-eb8a-4da1-ae60-9cc585256286",
-	// 		"email":    "test@mail.com",
+	// 		"id":       "5973d8e9-2279-4b12-9b99-b3908fe196a9",
+	// 		"email":    "mail@gmail.com",
 	// 		"username": "username",
 	// 	},
 	// }

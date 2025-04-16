@@ -84,6 +84,9 @@ func (r *Repository) CreateUser(ctx context.Context, id, username, email string)
 	query := `
 		INSERT INTO users (id, username, email)
 		VALUES ($1, $2, $3)
+		ON CONFLICT (id) DO UPDATE
+        SET username = EXCLUDED.username,
+            email = EXCLUDED.email
 	`
 	_, err := r.db.ExecContext(ctx, query, id, username, email)
 	if err != nil {

@@ -488,7 +488,7 @@ func (r *RabbitMQ) ConsumeMessages(handler MessageHandler) error {
 				}
 			}
 			if isCriticalMessageType(message.Type) {
-				message.Critical = false
+				message.Critical = true
 			}
 
 			log.Printf("Processing message [ID: %s, Type: %s, RetryCount: %d, ToServices: %v]",
