@@ -2,8 +2,8 @@ package initializer
 
 import (
 	"log"
-	"socialmedia/fallow/infra/redisrepo"
-	"socialmedia/fallow/pkg/config"
+	"socialmedia/follow/infra/redisrepo"
+	"socialmedia/follow/pkg/config"
 )
 
 func InitRedis(appConfig *config.Config) *redisrepo.RedisRepository {

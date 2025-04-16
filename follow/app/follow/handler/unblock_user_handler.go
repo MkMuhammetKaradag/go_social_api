@@ -1,8 +1,8 @@
-package fallow
+package follow
 
 import (
 	"context"
-	"socialmedia/fallow/app/fallow/usecase"
+	"socialmedia/follow/app/follow/usecase"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -17,7 +17,7 @@ type UnblockUserRequest struct {
 
 type UnblockUserResponse struct {
 	Message string
-} 
+}
 
 func NewUnblockUserHandler(usecase usecase.UnblockUserUseCase) *UnblockUserHandler {
 	return &UnblockUserHandler{usecase: usecase}

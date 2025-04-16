@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type FallowRequestUseCase interface {
+type FollowRequestUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context, userID uuid.UUID) (string, error)
 }
 type BlockUserUseCase interface {

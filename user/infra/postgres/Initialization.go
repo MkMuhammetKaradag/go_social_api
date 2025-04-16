@@ -24,13 +24,24 @@ const (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )`
+
+	fallowTable = `
+	CREATE TABLE IF NOT EXISTS follows_cache  (
+  follower_id UUID NOT NULL,
+    following_id UUID NOT NULL,
+    status TEXT NOT NULL, -- 'following', 'pending', 'none'
+    PRIMARY KEY (follower_id, following_id),
+    CHECK (follower_id != following_id)
+)`
 )
 
 func initDB(db *sql.DB) error {
 	if _, err := db.Exec(createUsersTable); err != nil {
 		return fmt.Errorf("failed to create users table: %w", err)
 	}
-
+	if _, err := db.Exec(fallowTable); err != nil {
+		return fmt.Errorf("failed to create fallow_cache table: %w", err)
+	}
 	log.Println("Database tables initialized")
 	return nil
 }

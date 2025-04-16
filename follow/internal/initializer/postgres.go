@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"socialmedia/fallow/infra/postgres"
-	"socialmedia/fallow/pkg/config"
+	"socialmedia/follow/infra/postgres"
+	"socialmedia/follow/pkg/config"
 )
 
 func InitDatabase(appConfig *config.Config) *postgres.Repository {

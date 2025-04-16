@@ -4,8 +4,10 @@ import (
 	"os"
 	"socialmedia/shared/messaging"
 	"socialmedia/shared/middlewares"
+	follow "socialmedia/user/app/follow/handler"
+	followUseCase "socialmedia/user/app/follow/usecase"
 	user "socialmedia/user/app/user/handler"
-	"socialmedia/user/app/user/usecase"
+	userUseCase "socialmedia/user/app/user/usecase"
 	"socialmedia/user/internal/handler"
 	"socialmedia/user/internal/initializer"
 	"socialmedia/user/internal/server"
@@ -24,9 +26,10 @@ func main() {
 	repo := initializer.InitDatabase(appConfig)
 	redisRepo := initializer.InitRedis(appConfig)
 
-	createUserUseCase := usecase.NewCreateUserUseCase(repo)
+	followRequestUseCase := followUseCase.NewFollowRequestUseCase(repo)
+	followRequestHandler := follow.NewFollowRequestHandler(followRequestUseCase)
+	createUserUseCase := userUseCase.NewCreateUserUseCase(repo)
 	createUserHandler := user.NewCreatedUserHandler(createUserUseCase)
-
 	messageRouter := func(msg messaging.Message) error {
 
 		// fmt.Println("mesage geldi main:", msg.Type)
@@ -34,6 +37,14 @@ func main() {
 		case messaging.UserTypes.UserCreated:
 			// fmt.Println("case gitrdi created")
 			err := createUserHandler.Handle(msg)
+
+			return err
+		case messaging.UserTypes.UserFollowed:
+			err := followRequestHandler.Handle(msg)
+
+			return err
+		case messaging.UserTypes.FollowRequestCreated:
+			err := followRequestHandler.Handle(msg)
 
 			return err
 
@@ -45,9 +56,9 @@ func main() {
 	rabbitMQ := initializer.InitMessaging(messageRouter)
 	defer rabbitMQ.Close()
 
-	profileUseCase := usecase.NewProfileUseCase(redisRepo, repo)
-	updateUserUseCase := usecase.NewUpdateUserUseCase(redisRepo, repo)
-	getUserUseCase := usecase.NewGetUserUseCase(redisRepo, repo)
+	profileUseCase := userUseCase.NewProfileUseCase(redisRepo, repo)
+	updateUserUseCase := userUseCase.NewUpdateUserUseCase(redisRepo, repo)
+	getUserUseCase := userUseCase.NewGetUserUseCase(redisRepo, repo)
 
 	profileUserHandler := user.NewProfileUserHandler(profileUseCase)
 	updateUserHandler := user.NewUpdateUserHandler(updateUserUseCase)

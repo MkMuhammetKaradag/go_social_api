@@ -2,7 +2,7 @@ package user
 
 import (
 	"context"
-	"socialmedia/fallow/app/user/usecase"
+	"socialmedia/follow/app/user/usecase"
 	"socialmedia/shared/messaging"
 	"socialmedia/user/domain"
 )

@@ -6,7 +6,7 @@ type MessageType string
 const (
 	AuthService   ServiceType = "auth"
 	UserService   ServiceType = "user"
-	FallowService ServiceType = "fallow"
+	FollowService ServiceType = "follow"
 	EmailService  ServiceType = "email"
 	ChatService   ServiceType = "chat"
 )
@@ -20,12 +20,16 @@ var EmailTypes = struct {
 }
 
 var UserTypes = struct {
-	UserCreated MessageType
+	UserCreated          MessageType
+	UserFollowed         MessageType
+	FollowRequestCreated MessageType
 }{
-	UserCreated: "user_created",
+	UserCreated:          "user_created",
+	UserFollowed:         "user_followed",
+	FollowRequestCreated: "follow_request_created",
 }
 
-var FallowTypes = struct {
+var FollowTypes = struct {
 	UserCreated MessageType
 }{
 	UserCreated: "user_created",

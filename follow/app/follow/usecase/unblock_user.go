@@ -2,26 +2,26 @@ package usecase
 
 import (
 	"context"
-	"socialmedia/fallow/domain"
+	"socialmedia/follow/domain"
 	"socialmedia/shared/middlewares"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
-type blockUserUseCase struct {
+type unblockUserUseCase struct {
 	sessionRepo RedisRepository
 	repository  Repository
 }
 
-func NewBlockUserUseCase(sessionRepo RedisRepository, repository Repository) BlockUserUseCase {
-	return &blockUserUseCase{
+func NewUnblockUserUseCase(sessionRepo RedisRepository, repository Repository) UnblockUserUseCase {
+	return &unblockUserUseCase{
 		sessionRepo: sessionRepo,
 		repository:  repository,
 	}
 }
 
-func (u *blockUserUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, BlockedID uuid.UUID) error {
+func (u *unblockUserUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, BlockedID uuid.UUID) error {
 	userData, ok := middlewares.GetUserData(fbrCtx)
 	if !ok {
 		return domain.ErrNotFoundAuthorization
@@ -32,7 +32,7 @@ func (u *blockUserUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, Block
 		return err
 	}
 
-	err = u.repository.BlockUser(ctx, currrentUserID, BlockedID)
+	err = u.repository.UnblockUser(ctx, currrentUserID, BlockedID)
 	if err != nil {
 		return err
 	}
