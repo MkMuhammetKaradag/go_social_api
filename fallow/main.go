@@ -2,8 +2,11 @@ package main
 
 import (
 	"os"
+	fallow "socialmedia/fallow/app/fallow/handler"
+	fallowUseCase "socialmedia/fallow/app/fallow/usecase"
 	user "socialmedia/fallow/app/user/handler"
 	userUseCase "socialmedia/fallow/app/user/usecase"
+	"socialmedia/fallow/internal/handler"
 	"socialmedia/fallow/internal/initializer"
 	"socialmedia/fallow/internal/server"
 	"socialmedia/fallow/pkg/config"
@@ -42,6 +45,9 @@ func main() {
 	rabbitMQ := initializer.InitMessaging(messageRouter)
 	defer rabbitMQ.Close()
 
+	fallowUserUseCase := fallowUseCase.NewFallowRequestUseCase(redisRepo, repo)
+	fallawRequestHandler := fallow.NewFallowRequestHandler(fallowUserUseCase)
+
 	serverConfig := server.Config{
 		Port:         appConfig.Server.Port,
 		IdleTimeout:  5 * time.Second,
@@ -57,9 +63,7 @@ func main() {
 
 	protected := app.Group("/", authMiddleware.Authenticate())
 	{
-		protected.Get("/pro", func(c *fiber.Ctx) error {
-			return c.SendString("Hello, World!-protecdet")
-		})
+		protected.Post("/fallow", handler.HandleWithFiber[fallow.FallowRequestRequest, fallow.FallowRequestResponse](fallawRequestHandler))
 
 	}
 
