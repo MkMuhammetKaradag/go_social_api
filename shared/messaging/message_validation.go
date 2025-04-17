@@ -11,6 +11,8 @@ var allowedMessageTypes = map[ServiceType][]MessageType{
 		"user_followed",
 		"follow_request",
 		"unfollow_request",
+		"user_blocked",
+		"user_unblocked",
 	},
 }
 

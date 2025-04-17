@@ -33,6 +33,14 @@ const (
     PRIMARY KEY (follower_id, following_id),
     CHECK (follower_id != following_id)
 )`
+
+	createBlockTable = `
+	CREATE TABLE IF NOT EXISTS blocks_cache (
+    blocker_id UUID NOT NULL,
+    blocked_id UUID NOT NULL,
+    PRIMARY KEY (blocker_id, blocked_id),
+    CHECK (blocker_id != blocked_id)
+)`
 )
 
 func initDB(db *sql.DB) error {
@@ -41,6 +49,10 @@ func initDB(db *sql.DB) error {
 	}
 	if _, err := db.Exec(fallowTable); err != nil {
 		return fmt.Errorf("failed to create fallow_cache table: %w", err)
+	}
+
+	if _, err := db.Exec(createBlockTable); err != nil {
+		return fmt.Errorf("failed to create blocks_cache table: %w", err)
 	}
 	log.Println("Database tables initialized")
 	return nil

@@ -34,6 +34,12 @@ func main() {
 	followRequestHandler := follow.NewFollowRequestHandler(followRequestUseCase)
 	unfollowRequestUseCase := followUseCase.NewUnFollowRequestUseCase(repo)
 	unfollowRequestHandler := follow.NewUnFollowRequestHandler(unfollowRequestUseCase)
+
+	blockUserUseCase := followUseCase.NewBlockUserUseCase(repo)
+	blockUserHandler := follow.NewBlockUserHandler(blockUserUseCase)
+	unblockUserUseCase := followUseCase.NewUnBlockUserUseCase(repo)
+	unblockUserHandler := follow.NewUnBlockUserHandler(unblockUserUseCase)
+
 	createUserUseCase := userUseCase.NewCreateUserUseCase(repo)
 	createUserHandler := user.NewCreatedUserHandler(createUserUseCase)
 
@@ -42,6 +48,8 @@ func main() {
 		messaging.UserTypes.UserFollowed:    followRequestHandler,
 		messaging.UserTypes.FollowRequest:   followRequestHandler,
 		messaging.UserTypes.UnFollowRequest: unfollowRequestHandler,
+		messaging.UserTypes.UserBlocked:     blockUserHandler,
+		messaging.UserTypes.UserUnBlocked:   unblockUserHandler,
 	}
 
 	messageRouter := func(msg messaging.Message) error {

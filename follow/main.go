@@ -47,8 +47,8 @@ func main() {
 
 	followRequestUseCase := followUseCase.NewFollowRequestUseCase(redisRepo, repo, rabbitMQ)
 	unfollowRequestUseCase := followUseCase.NewUnFollowRequestUseCase(redisRepo, repo, rabbitMQ)
-	blockUserUseCase := followUseCase.NewBlockUserUseCase(redisRepo, repo)
-	unblockUserUseCase := followUseCase.NewUnblockUserUseCase(redisRepo, repo)
+	blockUserUseCase := followUseCase.NewBlockUserUseCase(redisRepo, repo, rabbitMQ)
+	unblockUserUseCase := followUseCase.NewUnblockUserUseCase(redisRepo, repo, rabbitMQ)
 	fallawRequestHandler := follow.NewFollowRequestHandler(followRequestUseCase)
 	unfallawRequestHandler := follow.NewUnFollowRequestHandler(unfollowRequestUseCase)
 	blockUserHandler := follow.NewBlockUserHandler(blockUserUseCase)
