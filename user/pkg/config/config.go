@@ -38,7 +38,7 @@ type RedisConfig struct {
 	DB       int    `mapstructure:"db"`
 }
 
-func Read() *Config {
+func Read() Config {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
@@ -52,5 +52,5 @@ func Read() *Config {
 		log.Fatalf("Yapılandırma çözümlenemedi: %v", err)
 	}
 
-	return &config
+	return config
 }

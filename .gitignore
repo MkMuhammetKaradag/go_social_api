@@ -5,7 +5,7 @@
 *.test
 *.out
 *.env
-*tstrbtmq.txt
+*cache.txt
 
 # Dependency directories (modules or vendor)
 /vendor/

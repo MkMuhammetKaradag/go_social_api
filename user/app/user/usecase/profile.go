@@ -22,6 +22,7 @@ func NewProfileUseCase(sessionRepo RedisRepository, repository Repository) Profi
 }
 
 func (u *profileUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context) (*domain.User, error) {
+
 	userData, ok := middlewares.GetUserData(fbrCtx)
 	if !ok {
 		return nil, fmt.Errorf("kullanıcıbilgisi  bulunamadı")

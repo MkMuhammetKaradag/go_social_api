@@ -74,7 +74,7 @@ func (r *Repository) GetUserProfile(ctx context.Context, identifier string) (*do
 		}
 		return nil, fmt.Errorf("query error: %w", err)
 	}
-	fmt.Println("repository içi", user)
+	// fmt.Println("repository içi", user)
 
 	return &user, nil
 }
