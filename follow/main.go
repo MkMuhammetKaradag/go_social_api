@@ -46,9 +46,11 @@ func main() {
 	defer rabbitMQ.Close()
 
 	followRequestUseCase := followUseCase.NewFollowRequestUseCase(redisRepo, repo, rabbitMQ)
+	unfollowRequestUseCase := followUseCase.NewUnFollowRequestUseCase(redisRepo, repo, rabbitMQ)
 	blockUserUseCase := followUseCase.NewBlockUserUseCase(redisRepo, repo)
 	unblockUserUseCase := followUseCase.NewUnblockUserUseCase(redisRepo, repo)
 	fallawRequestHandler := follow.NewFollowRequestHandler(followRequestUseCase)
+	unfallawRequestHandler := follow.NewUnFollowRequestHandler(unfollowRequestUseCase)
 	blockUserHandler := follow.NewBlockUserHandler(blockUserUseCase)
 	unblockUserHandler := follow.NewUnblockUserHandler(unblockUserUseCase)
 
@@ -68,6 +70,7 @@ func main() {
 	protected := app.Group("/", authMiddleware.Authenticate())
 	{
 		protected.Post("/follow", handler.HandleWithFiber[follow.FollowRequestRequest, follow.FollowRequestResponse](fallawRequestHandler))
+		protected.Post("/unfollow", handler.HandleWithFiber[follow.UnFollowRequestRequest, follow.UnFollowRequestResponse](unfallawRequestHandler))
 		protected.Post("/block", handler.HandleWithFiber[follow.BlockUserRequest, follow.BlockUserResponse](blockUserHandler))
 		protected.Post("/unblock", handler.HandleWithFiber[follow.UnblockUserRequest, follow.UnblockUserResponse](unblockUserHandler))
 

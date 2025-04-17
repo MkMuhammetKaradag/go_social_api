@@ -59,3 +59,19 @@ func (r *Repository) CreateFollowRequest(ctx context.Context, requesterID, targe
 
 	return nil
 }
+func (r *Repository) IsFollowing(ctx context.Context, followerID, followingID uuid.UUID) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM follows
+			WHERE follower_id = $1 AND following_id = $2
+		)
+	`
+
+	var exists bool
+	err := r.db.QueryRowContext(ctx, query, followerID, followingID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check follow relationship: %w", err)
+	}
+
+	return exists, nil
+}

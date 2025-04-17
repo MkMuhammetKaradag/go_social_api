@@ -53,7 +53,7 @@ func (u *followRequestUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, f
 			return "", err
 		}
 		followMessage := messaging.Message{
-			Type:       messaging.UserTypes.FollowRequestCreated,
+			Type:       messaging.UserTypes.FollowRequest,
 			ToServices: []messaging.ServiceType{messaging.UserService},
 			Data: map[string]interface{}{
 				"follower_id":  currrentUserID,

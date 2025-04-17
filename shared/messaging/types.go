@@ -20,13 +20,15 @@ var EmailTypes = struct {
 }
 
 var UserTypes = struct {
-	UserCreated          MessageType
-	UserFollowed         MessageType
-	FollowRequestCreated MessageType
+	UserCreated     MessageType
+	UserFollowed    MessageType
+	FollowRequest   MessageType
+	UnFollowRequest MessageType
 }{
-	UserCreated:          "user_created",
-	UserFollowed:         "user_followed",
-	FollowRequestCreated: "follow_request_created",
+	UserCreated:     "user_created",
+	UserFollowed:    "user_followed",
+	FollowRequest:   "follow_request",
+	UnFollowRequest: "unfollow_request",
 }
 
 var FollowTypes = struct {

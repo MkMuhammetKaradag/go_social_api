@@ -10,6 +10,9 @@ import (
 type FollowRequestUseCase interface {
 	Execute(ctx context.Context, followerID, followingID uuid.UUID, status string) error
 }
+type UnFollowRequestUseCase interface {
+	Execute(ctx context.Context, followerID, followingID uuid.UUID, status string) error
+}
 
 type RabbitMQ interface {
 	PublishMessage(ctx context.Context, msg messaging.Message) error

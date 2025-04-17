@@ -43,7 +43,7 @@ func main() {
 			err := followRequestHandler.Handle(msg)
 
 			return err
-		case messaging.UserTypes.FollowRequestCreated:
+		case messaging.UserTypes.FollowRequest:
 			err := followRequestHandler.Handle(msg)
 
 			return err
