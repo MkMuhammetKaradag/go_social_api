@@ -19,6 +19,10 @@ import (
 	"go.uber.org/zap"
 )
 
+type MessageHandler interface {
+	Handle(msg messaging.Message) error
+}
+
 func main() {
 	appConfig := config.Read()
 	defer zap.L().Sync()
@@ -28,29 +32,24 @@ func main() {
 
 	followRequestUseCase := followUseCase.NewFollowRequestUseCase(repo)
 	followRequestHandler := follow.NewFollowRequestHandler(followRequestUseCase)
+	unfollowRequestUseCase := followUseCase.NewUnFollowRequestUseCase(repo)
+	unfollowRequestHandler := follow.NewUnFollowRequestHandler(unfollowRequestUseCase)
 	createUserUseCase := userUseCase.NewCreateUserUseCase(repo)
 	createUserHandler := user.NewCreatedUserHandler(createUserUseCase)
+
+	var handlers = map[messaging.MessageType]MessageHandler{
+		messaging.UserTypes.UserCreated:     createUserHandler,
+		messaging.UserTypes.UserFollowed:    followRequestHandler,
+		messaging.UserTypes.FollowRequest:   followRequestHandler,
+		messaging.UserTypes.UnFollowRequest: unfollowRequestHandler,
+	}
+
 	messageRouter := func(msg messaging.Message) error {
-
-		// fmt.Println("mesage geldi main:", msg.Type)
-		switch msg.Type {
-		case messaging.UserTypes.UserCreated:
-			// fmt.Println("case gitrdi created")
-			err := createUserHandler.Handle(msg)
-
-			return err
-		case messaging.UserTypes.UserFollowed:
-			err := followRequestHandler.Handle(msg)
-
-			return err
-		case messaging.UserTypes.FollowRequest:
-			err := followRequestHandler.Handle(msg)
-
-			return err
-
-		default:
+		handler, ok := handlers[msg.Type]
+		if !ok {
 			return nil
 		}
+		return handler.Handle(msg)
 	}
 
 	rabbitMQ := initializer.InitMessaging(messageRouter)

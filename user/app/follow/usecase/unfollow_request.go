@@ -16,9 +16,9 @@ func NewUnFollowRequestUseCase(repository Repository) UnFollowRequestUseCase {
 	}
 }
 
-func (u *unfollowRequestUseCase) Execute(ctx context.Context, followerID, followingID uuid.UUID, status string) error {
+func (u *unfollowRequestUseCase) Execute(ctx context.Context, followerID, followingID uuid.UUID) error {
 
-	err := u.repository.CreateFollow(ctx, followerID, followingID, status)
+	err := u.repository.DeleteFollow(ctx, followerID, followingID)
 	if err != nil {
 		return err
 	}

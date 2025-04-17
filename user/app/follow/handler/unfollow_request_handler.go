@@ -24,24 +24,20 @@ func (h *UnFollowRequestHandler) Handle(msg messaging.Message) error {
 		return domain.ErrInvalidMessageFormat
 	}
 
-	UnfollowerIDStr, ok := data["Unfollower_id"].(string)
-	if !ok {
-		return domain.ErrMissingEmail
-	}
-
-	UnfollowingIDStr, ok := data["Unfollowing_id"].(string)
+	UnfollowerIDStr, ok := data["unfollower_id"].(string)
 	if !ok {
 		return domain.ErrMissingId
 	}
 
-	status, ok := data["status"].(string)
+	UnfollowingIDStr, ok := data["unfollowing_id"].(string)
 	if !ok {
-		return domain.ErrMissingUserName
+		return domain.ErrMissingId
 	}
+
 
 	UnfollowerID, err := uuid.Parse(UnfollowerIDStr)
 	if err != nil {
-		return domain.ErrMissingEmail
+		return domain.ErrMissingId
 	}
 
 	UnfollowingID, err := uuid.Parse(UnfollowingIDStr)
@@ -51,6 +47,6 @@ func (h *UnFollowRequestHandler) Handle(msg messaging.Message) error {
 
 	ctx := context.Background()
 
-	return h.usecase.Execute(ctx, UnfollowerID, UnfollowingID, status)
+	return h.usecase.Execute(ctx, UnfollowerID, UnfollowingID)
 
 }

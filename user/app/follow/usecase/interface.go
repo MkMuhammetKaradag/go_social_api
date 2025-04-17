@@ -11,7 +11,7 @@ type FollowRequestUseCase interface {
 	Execute(ctx context.Context, followerID, followingID uuid.UUID, status string) error
 }
 type UnFollowRequestUseCase interface {
-	Execute(ctx context.Context, followerID, followingID uuid.UUID, status string) error
+	Execute(ctx context.Context, followerID, followingID uuid.UUID) error
 }
 
 type RabbitMQ interface {
@@ -19,6 +19,7 @@ type RabbitMQ interface {
 }
 type Repository interface {
 	CreateFollow(ctx context.Context, followerID, followingID uuid.UUID, status string) error
+	DeleteFollow(ctx context.Context, followerID, followingID uuid.UUID) error
 }
 
 type RedisRepository interface {

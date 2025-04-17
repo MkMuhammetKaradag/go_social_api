@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+
 	"fmt"
 
 	"github.com/google/uuid"
@@ -22,6 +23,29 @@ func (r *Repository) CreateFollow(ctx context.Context, followerID, followingID u
 		}
 		return fmt.Errorf("failed to create follow relationship: %w", err)
 	}
+
+	return nil
+}
+
+func (r *Repository) DeleteFollow(ctx context.Context, followerID, followingID uuid.UUID) error {
+	query := `
+		DELETE FROM follows_cache
+		WHERE follower_id = $1 AND following_id = $2
+	`
+
+	_, err := r.db.ExecContext(ctx, query, followerID, followingID)
+	if err != nil {
+		return fmt.Errorf("failed to delete follow relationship: %w", err)
+	}
+
+	// rowsAffected, err := _.RowsAffected()
+	// if err != nil {
+	// 	return fmt.Errorf("failed to get affected rows: %w", err)
+	// }
+
+	// if rowsAffected == 0 {
+	// 	return sql.ErrNoRows
+	// }
 
 	return nil
 }

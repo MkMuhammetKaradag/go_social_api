@@ -64,8 +64,8 @@ func (u *unfollowRequestUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context,
 		Type:       messageType,
 		ToServices: []messaging.ServiceType{messaging.UserService},
 		Data: map[string]interface{}{
-			"follower_id":  currentUserID,
-			"following_id": followingID,
+			"unfollower_id":  currentUserID,
+			"unfollowing_id": followingID,
 		},
 		Critical: true,
 	}
