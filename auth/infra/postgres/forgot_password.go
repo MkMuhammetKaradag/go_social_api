@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"socialmedia/auth/domain"
+
+	"github.com/google/uuid"
 )
 
 func (r *Repository) RequestForgotPassword(ctx context.Context, fp *domain.ForgotPassword) (string, error) {
 	const userQuery = `SELECT id, username FROM users WHERE email = $1`
 
-	var userID int
+	var userID uuid.UUID
 	var username string
 
 	if err := r.db.QueryRowContext(ctx, userQuery, fp.Email).Scan(&userID, &username); err != nil {
@@ -28,4 +30,3 @@ func (r *Repository) RequestForgotPassword(ctx context.Context, fp *domain.Forgo
 
 	return username, nil
 }
-
