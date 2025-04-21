@@ -75,3 +75,108 @@ func (r *Repository) IsFollowing(ctx context.Context, followerID, followingID uu
 
 	return exists, nil
 }
+
+func (r *Repository) AcceptFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		} else {
+			_ = tx.Commit()
+		}
+	}()
+
+	// 1. follow_requests içinden requester ve target ID'yi çek
+	var requesterID, targetID uuid.UUID
+	selectQuery := `
+		SELECT requester_id, target_id
+		FROM follow_requests
+		WHERE id = $1 AND status = 'pending'
+	`
+	err = tx.QueryRowContext(ctx, selectQuery, requestID).Scan(&requesterID, &targetID)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("follow request not found or already handled")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to fetch follow request: %w", err)
+	}
+
+	// 2. İsteğin gerçekten bu kullanıcıya gelip gelmediğini kontrol et
+	if targetID != currentUserID {
+		return fmt.Errorf("unauthorized: follow request not directed to this user")
+	}
+
+	// 3. follow_requests tablosunu güncelle (status = accepted)
+	updateQuery := `
+		UPDATE follow_requests 
+		SET status = 'accepted'
+		WHERE id = $1
+	`
+	_, err = tx.ExecContext(ctx, updateQuery, requestID)
+	if err != nil {
+		return fmt.Errorf("failed to update follow request: %w", err)
+	}
+
+	// 4. follows tablosuna takip ilişkisini yaz
+	insertQuery := `
+		INSERT INTO follows (follower_id, following_id)
+		VALUES ($1, $2)
+		ON CONFLICT (follower_id, following_id) DO NOTHING
+	`
+	_, err = tx.ExecContext(ctx, insertQuery, requesterID, targetID)
+	if err != nil {
+		return fmt.Errorf("failed to insert follow relation: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Repository) RejectFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		} else {
+			_ = tx.Commit()
+		}
+	}()
+
+	// 1. follow_requests içinden requester ve target ID'yi çek
+	var requesterID, targetID uuid.UUID
+	selectQuery := `
+		SELECT requester_id, target_id
+		FROM follow_requests
+		WHERE id = $1 AND status = 'pending'
+	`
+	err = tx.QueryRowContext(ctx, selectQuery, requestID).Scan(&requesterID, &targetID)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("follow request not found or already handled")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to fetch follow request: %w", err)
+	}
+
+	// 2. İsteğin gerçekten bu kullanıcıya gelip gelmediğini kontrol et
+	if targetID != currentUserID {
+		return fmt.Errorf("unauthorized: follow request not directed to this user")
+	}
+
+	// 3. follow_requests tablosunu güncelle (status = accepted)
+	updateQuery := `
+		UPDATE follow_requests 
+		SET status = 'rejectted'
+		WHERE id = $1
+	`
+	_, err = tx.ExecContext(ctx, updateQuery, requestID)
+	if err != nil {
+		return fmt.Errorf("failed to update follow request: %w", err)
+	}
+
+	return nil
+}

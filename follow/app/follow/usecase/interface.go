@@ -26,6 +26,14 @@ type UnblockUserUseCase interface {
 type IncomingRequestsUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context) ([]*domain.User, error)
 }
+
+type AcceptFollowRequestUseCase interface {
+	Execute(fbrCtx *fiber.Ctx, ctx context.Context, requestID uuid.UUID) (string, error)
+}
+type RejectFollowRequestUseCase interface {
+	Execute(fbrCtx *fiber.Ctx, ctx context.Context, requestID uuid.UUID) (string, error)
+}
+
 type RabbitMQ interface {
 	PublishMessage(ctx context.Context, msg messaging.Message) error
 }
@@ -40,6 +48,8 @@ type Repository interface {
 	DeleteFollowRequest(ctx context.Context, requesterID, targetID uuid.UUID) error
 	IsFollowing(ctx context.Context, followerID, followingID uuid.UUID) (bool, error)
 	IncomingRequests(ctx context.Context, currentUserID uuid.UUID) ([]*domain.User, error)
+	AcceptFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) error
+	RejectFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) error
 	// UserExists(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 

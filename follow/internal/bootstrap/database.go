@@ -21,6 +21,8 @@ type Repository interface {
 	DeleteFollowRequest(ctx context.Context, requesterID, targetID uuid.UUID) error
 	IsFollowing(ctx context.Context, followerID, followingID uuid.UUID) (bool, error)
 	IncomingRequests(ctx context.Context, currentUserID uuid.UUID) ([]*domain.User, error)
+	AcceptFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) error
+	RejectFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) error
 }
 
 type RedisRepository interface {
