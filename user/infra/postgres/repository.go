@@ -97,20 +97,39 @@ func (r *Repository) CreateUser(ctx context.Context, id, username, email string)
 
 func (r *Repository) GetUser(ctx context.Context, currrentUserID, targetUserID uuid.UUID) (*domain.User, error) {
 	const query = `
-	SELECT 
-		id,
-		username,
-		CASE WHEN is_private AND id != $2 THEN NULL ELSE avatar_url END,
-		CASE WHEN is_private AND id != $2 THEN NULL ELSE banner_url END,
-		is_private
-	FROM users
-	WHERE id = $1
+SELECT 
+	u.id,
+	u.username,
+	u.avatar_url,
+	u.banner_url,
+	u.is_private,
+	COALESCE(f.status = 'following', false) AS is_following,
+	EXISTS (
+		SELECT 1 FROM blocks_cache 
+		WHERE (blocker_id = $1 AND blocked_id = $2)
+		   OR (blocker_id = $2 AND blocked_id = $1)
+	) AS is_blocked,
+	u.id = $2 AS is_self
+FROM users u
+LEFT JOIN follows_cache f 
+	ON f.follower_id = $2 AND f.following_id = u.id
+WHERE u.id = $1
+
 `
 
 	row := r.db.QueryRowContext(ctx, query, targetUserID, currrentUserID)
 
 	var user domain.User
-	err := row.Scan(&user.ID, &user.Username, &user.AvatarURL, &user.BannerURL, &user.IsPrivate)
+	err := row.Scan(
+		&user.ID,
+		&user.Username,
+		&user.AvatarURL,
+		&user.BannerURL,
+		&user.IsPrivate,
+		&user.IsFollowing,
+		&user.IsBlocked,
+		&user.Self,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}

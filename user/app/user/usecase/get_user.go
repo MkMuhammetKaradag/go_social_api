@@ -38,6 +38,12 @@ func (u *getUserUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, identif
 		return nil, err
 
 	}
-
+	fmt.Println(user)
+	if !user.CanViewDetails() {
+		return &domain.User{
+			ID:       user.ID,
+			Username: user.Username,
+		}, nil
+	}
 	return user, nil
 }
