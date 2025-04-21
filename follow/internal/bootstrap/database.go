@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"socialmedia/follow/domain"
 	"socialmedia/follow/internal/initializer"
 	"socialmedia/follow/pkg/config"
 
@@ -19,6 +20,7 @@ type Repository interface {
 	DeleteFollow(ctx context.Context, followerID, followingID uuid.UUID) error
 	DeleteFollowRequest(ctx context.Context, requesterID, targetID uuid.UUID) error
 	IsFollowing(ctx context.Context, followerID, followingID uuid.UUID) (bool, error)
+	IncomingRequests(ctx context.Context, currentUserID uuid.UUID) ([]*domain.User, error)
 }
 
 type RedisRepository interface {

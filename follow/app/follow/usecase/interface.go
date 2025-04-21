@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"socialmedia/follow/domain"
 	"socialmedia/shared/messaging"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,6 +22,10 @@ type BlockUserUseCase interface {
 type UnblockUserUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context, userID uuid.UUID) error
 }
+
+type IncomingRequestsUseCase interface {
+	Execute(fbrCtx *fiber.Ctx, ctx context.Context) ([]*domain.User, error)
+}
 type RabbitMQ interface {
 	PublishMessage(ctx context.Context, msg messaging.Message) error
 }
@@ -34,6 +39,7 @@ type Repository interface {
 	DeleteFollow(ctx context.Context, followerID, followingID uuid.UUID) error
 	DeleteFollowRequest(ctx context.Context, requesterID, targetID uuid.UUID) error
 	IsFollowing(ctx context.Context, followerID, followingID uuid.UUID) (bool, error)
+	IncomingRequests(ctx context.Context, currentUserID uuid.UUID) ([]*domain.User, error)
 	// UserExists(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 

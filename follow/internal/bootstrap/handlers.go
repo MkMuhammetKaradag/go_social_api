@@ -21,15 +21,19 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, rabbitMQ Mess
 	unfollowRequestUseCase := followUseCase.NewUnFollowRequestUseCase(redisRepo, repo, rabbitMQ)
 	blockUserUseCase := followUseCase.NewBlockUserUseCase(redisRepo, repo, rabbitMQ)
 	unblockUserUseCase := followUseCase.NewUnblockUserUseCase(redisRepo, repo, rabbitMQ)
+	incomingRequestUseCase := followUseCase.NewIncomingRequestsUseCase(redisRepo, repo)
+
 	fallawRequestHandler := follow.NewFollowRequestHandler(followRequestUseCase)
 	unfallawRequestHandler := follow.NewUnFollowRequestHandler(unfollowRequestUseCase)
 	blockUserHandler := follow.NewBlockUserHandler(blockUserUseCase)
 	unblockUserHandler := follow.NewUnblockUserHandler(unblockUserUseCase)
+	incomingRequestHandler := follow.NewIncomingRequestsHandler(incomingRequestUseCase)
 
 	return map[string]interface{}{
-		"follow":   fallawRequestHandler,
-		"unfollow": unfallawRequestHandler,
-		"block":    blockUserHandler,
-		"unblock":  unblockUserHandler,
+		"follow":          fallawRequestHandler,
+		"unfollow":        unfallawRequestHandler,
+		"block":           blockUserHandler,
+		"unblock":         unblockUserHandler,
+		"incomingRequest": incomingRequestHandler,
 	}
 }
