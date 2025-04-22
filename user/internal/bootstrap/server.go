@@ -37,10 +37,13 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 		profileHandler := httpHandlers["profile"].(*user.ProfileUserHandler)
 		updateHandler := httpHandlers["update"].(*user.UpdateUserHandler)
 		getUserHandler := httpHandlers["getUser"].(*user.GetUserHandler)
+		searchUsersHandler := httpHandlers["searchusers"].(*user.SearchUserHandler)
 
 		protected.Get("/profile", handler.HandleWithFiber[user.ProfileUserRequest, user.ProfileUserResponse](profileHandler))
 		protected.Post("/update", handler.HandleWithFiber[user.UpdateUserRequest, user.UpdateUserResponse](updateHandler))
+		protected.Get("/searchusers", handler.HandleWithFiber[user.SearchUserRequest, user.SearchUserResponse](searchUsersHandler))
 		protected.Get("/:id", handler.HandleWithFiber[user.GetUserRequest, user.GetUserResponse](getUserHandler))
+
 	}
 
 	return app

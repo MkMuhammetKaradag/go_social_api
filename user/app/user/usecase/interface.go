@@ -18,7 +18,9 @@ type CreateUserUseCase interface {
 type GetUserUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context, Identifier uuid.UUID) (*domain.User, error)
 }
-
+type SearchUserUseCase interface {
+	Execute(fbrCtx *fiber.Ctx, ctx context.Context, Identifier string, page, limit int) ([]*domain.UserSearchResult, error)
+}
 type UpdateUserUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context, updateuser domain.UserUpdate) error
 }
@@ -31,6 +33,7 @@ type Repository interface {
 	CreateUser(ctx context.Context, id, username, email string) error
 	UpdateUser(ctx context.Context, userID string, update domain.UserUpdate) error
 	GetUser(ctx context.Context, currrentUserID, targetUserID uuid.UUID) (*domain.User, error)
+	SearchUsers(ctx context.Context, currentUserID uuid.UUID, searchTerm string, page, limit int) ([]*domain.UserSearchResult, error)
 }
 
 type RedisRepository interface {

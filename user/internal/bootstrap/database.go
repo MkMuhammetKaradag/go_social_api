@@ -19,6 +19,7 @@ type Repository interface {
 	CreateUser(ctx context.Context, id, username, email string) error
 	UpdateUser(ctx context.Context, userID string, update domain.UserUpdate) error
 	GetUser(ctx context.Context, currrentUserID, targetUserID uuid.UUID) (*domain.User, error)
+	SearchUsers(ctx context.Context, currentUserID uuid.UUID, searchTerm string, page, limit int) ([]*domain.UserSearchResult, error)
 }
 
 type RedisRepository interface {

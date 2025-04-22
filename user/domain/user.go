@@ -43,3 +43,9 @@ type UserUpdate struct {
 	Website   *string `json:"website,omitempty"`
 	IsPrivate *bool   `json:"is_private,omitempty"`
 }
+
+type UserSearchResult struct {
+	ID        uuid.UUID `json:"id"`
+	Username  string    `json:"username"`
+	AvatarURL *string   `json:"avatar_url"`
+}
