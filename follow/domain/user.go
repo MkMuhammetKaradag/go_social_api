@@ -19,3 +19,10 @@ type FollowRequestUser struct {
 	RequestedAt time.Time `json:"requested_at,omitempty"`
 }
 
+type BlockedUser struct {
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Username  string    `json:"username"`
+	AvatarURL string    `json:"avatar_url"`
+	BlockedAt time.Time `json:"blocked_at"`
+}
