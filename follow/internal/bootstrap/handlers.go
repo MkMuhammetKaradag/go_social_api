@@ -22,6 +22,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, rabbitMQ Mess
 	blockUserUseCase := followUseCase.NewBlockUserUseCase(redisRepo, repo, rabbitMQ)
 	unblockUserUseCase := followUseCase.NewUnblockUserUseCase(redisRepo, repo, rabbitMQ)
 	incomingRequestUseCase := followUseCase.NewIncomingRequestsUseCase(redisRepo, repo)
+	outgoingRequestUseCase := followUseCase.NewOutgoingRequestsUseCase(redisRepo, repo)
 	acceptFollowRequestUseCase := followUseCase.NewAcceptFollowRequestUseCase(redisRepo, repo, rabbitMQ)
 	rejectFollowRequestUseCase := followUseCase.NewRejectFollowRequestUseCase(redisRepo, repo, rabbitMQ)
 
@@ -30,6 +31,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, rabbitMQ Mess
 	blockUserHandler := follow.NewBlockUserHandler(blockUserUseCase)
 	unblockUserHandler := follow.NewUnblockUserHandler(unblockUserUseCase)
 	incomingRequestHandler := follow.NewIncomingRequestsHandler(incomingRequestUseCase)
+	outgoingRequestHandler := follow.NewOutgoingRequestsHandler(outgoingRequestUseCase)
 	acceptFollowHandler := follow.NewAcceptFollowRequestHandler(acceptFollowRequestUseCase)
 	rejectFollowHandler := follow.NewRejectFollowRequestHandler(rejectFollowRequestUseCase)
 
@@ -39,6 +41,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, rabbitMQ Mess
 		"block":           blockUserHandler,
 		"unblock":         unblockUserHandler,
 		"incomingRequest": incomingRequestHandler,
+		"outgoingRequest": outgoingRequestHandler,
 		"accept":          acceptFollowHandler,
 		"reject":          rejectFollowHandler,
 	}

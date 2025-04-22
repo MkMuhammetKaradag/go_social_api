@@ -35,6 +35,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 		blockUserHandler := httpHandlers["block"].(*follow.BlockUserHandler)
 		unblockUserHandler := httpHandlers["unblock"].(*follow.UnblockUserHandler)
 		incomingRequestHandler := httpHandlers["incomingRequest"].(*follow.IncomingRequestsHandler)
+		outgoingRequestHandler := httpHandlers["outgoingRequest"].(*follow.OutgoingRequestsHandler)
 		acceptRequestHandler := httpHandlers["accept"].(*follow.AcceptFollowRequestHandler)
 		rejectRequestHandler := httpHandlers["reject"].(*follow.RejectFollowRequestHandler)
 
@@ -45,6 +46,8 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 		protected.Post("/unblock", handler.HandleWithFiber[follow.UnblockUserRequest, follow.UnblockUserResponse](unblockUserHandler))
 
 		protected.Get("/follow/requests/incoming", handler.HandleWithFiber[follow.IncomingRequestsRequest, follow.IncomingRequestsResponse](incomingRequestHandler))
+		protected.Get("/follow/requests/outgoing", handler.HandleWithFiber[follow.OutgoingRequestsRequest, follow.OutgoingRequestsResponse](outgoingRequestHandler))
+
 
 		protected.Post("/follow/accept", handler.HandleWithFiber[follow.AcceptFollowRequest, follow.AcceptFollowResponse](acceptRequestHandler))
 		protected.Post("/follow/reject", handler.HandleWithFiber[follow.RejectFollowRequest, follow.RejectFollowResponse](rejectRequestHandler))

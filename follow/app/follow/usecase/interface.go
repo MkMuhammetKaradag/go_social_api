@@ -26,7 +26,9 @@ type UnblockUserUseCase interface {
 type IncomingRequestsUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context) ([]*domain.User, error)
 }
-
+type OutgoingRequestsUseCase interface {
+	Execute(fbrCtx *fiber.Ctx, ctx context.Context) ([]*domain.FollowRequestUser, error)
+}
 type AcceptFollowRequestUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context, requestID uuid.UUID) (string, error)
 }
@@ -48,6 +50,7 @@ type Repository interface {
 	DeleteFollowRequest(ctx context.Context, requesterID, targetID uuid.UUID) error
 	IsFollowing(ctx context.Context, followerID, followingID uuid.UUID) (bool, error)
 	IncomingRequests(ctx context.Context, currentUserID uuid.UUID) ([]*domain.User, error)
+	OutgoingRequests(ctx context.Context, currentUserID uuid.UUID) ([]*domain.FollowRequestUser, error)
 	AcceptFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) (uuid.UUID, error)
 	RejectFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) (uuid.UUID, error)
 	// UserExists(ctx context.Context, userID uuid.UUID) (bool, error)
