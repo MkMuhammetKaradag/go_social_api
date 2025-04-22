@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"socialmedia/follow/domain"
+	"socialmedia/shared/messaging"
 	"socialmedia/shared/middlewares"
 
 	"github.com/gofiber/fiber/v2"
@@ -34,11 +35,24 @@ func (u *acceptFollowRequestUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Cont
 		return "", err
 	}
 
-	err = u.repository.AcceptFollowRequest(ctx, requestID, currrentUserID)
+	followerID, err := u.repository.AcceptFollowRequest(ctx, requestID, currrentUserID)
 	if err != nil {
 		return "", err
 	}
 
+	followMessage := messaging.Message{
+		Type:       messaging.UserTypes.UserFollowed,
+		ToServices: []messaging.ServiceType{messaging.UserService},
+		Data: map[string]interface{}{
+			"follower_id":  followerID,
+			"following_id": currrentUserID,
+			"status":       "following",
+		},
+		Critical: true,
+	}
+	if err := u.rabbitMQ.PublishMessage(ctx, followMessage); err != nil {
+		return "", err
+	}
 	return "Follow request  accepted", nil
 
 }

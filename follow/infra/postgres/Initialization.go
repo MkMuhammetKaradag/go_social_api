@@ -32,9 +32,10 @@ const (
     target_id UUID NOT NULL,
     requested_at TIMESTAMP DEFAULT NOW(),
     status TEXT DEFAULT 'pending',  -- 'pending', 'accepted', 'rejected' 
-	UNIQUE (requester_id, target_id),
+	
     CHECK (requester_id != target_id)
 )`
+	// UNIQUE (requester_id, target_id),
 	createBlockTable = `
 	CREATE TABLE IF NOT EXISTS blocks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

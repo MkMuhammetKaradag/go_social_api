@@ -43,12 +43,29 @@ func (r *Repository) CreateFollow(ctx context.Context, followerID, followingID u
 }
 
 func (r *Repository) CreateFollowRequest(ctx context.Context, requesterID, targetID uuid.UUID) error {
-	query := `
-		INSERT INTO follow_requests (requester_id, target_id, status)
-		VALUES ($1, $2, 'pending')
-	`
+	checkQuery := `
+        SELECT 1 FROM follow_requests 
+        WHERE requester_id = $1 AND target_id = $2 AND status = 'pending'
+    `
 
-	_, err := r.db.ExecContext(ctx, query, requesterID, targetID)
+	var exists bool
+	err := r.db.QueryRowContext(ctx, checkQuery, requesterID, targetID).Scan(&exists)
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("failed to check for existing request: %w", err)
+	}
+
+	// If a pending request exists, return error
+	if exists {
+		return ErrDuplicateRequest
+	}
+
+	// If no pending request exists, create a new one
+	insertQuery := `
+        INSERT INTO follow_requests (requester_id, target_id, status)
+        VALUES ($1, $2, 'pending')
+    `
+
+	_, err = r.db.ExecContext(ctx, insertQuery, requesterID, targetID)
 	if err != nil {
 		// Check for unique constraint violation (request already exists)
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
@@ -76,10 +93,10 @@ func (r *Repository) IsFollowing(ctx context.Context, followerID, followingID uu
 	return exists, nil
 }
 
-func (r *Repository) AcceptFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) error {
+func (r *Repository) AcceptFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) (uuid.UUID, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -98,15 +115,15 @@ func (r *Repository) AcceptFollowRequest(ctx context.Context, requestID, current
 	`
 	err = tx.QueryRowContext(ctx, selectQuery, requestID).Scan(&requesterID, &targetID)
 	if err == sql.ErrNoRows {
-		return fmt.Errorf("follow request not found or already handled")
+		return uuid.UUID{}, fmt.Errorf("follow request not found or already handled")
 	}
 	if err != nil {
-		return fmt.Errorf("failed to fetch follow request: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to fetch follow request: %w", err)
 	}
 
 	// 2. İsteğin gerçekten bu kullanıcıya gelip gelmediğini kontrol et
 	if targetID != currentUserID {
-		return fmt.Errorf("unauthorized: follow request not directed to this user")
+		return uuid.UUID{}, fmt.Errorf("unauthorized: follow request not directed to this user")
 	}
 
 	// 3. follow_requests tablosunu güncelle (status = accepted)
@@ -117,7 +134,7 @@ func (r *Repository) AcceptFollowRequest(ctx context.Context, requestID, current
 	`
 	_, err = tx.ExecContext(ctx, updateQuery, requestID)
 	if err != nil {
-		return fmt.Errorf("failed to update follow request: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to update follow request: %w", err)
 	}
 
 	// 4. follows tablosuna takip ilişkisini yaz
@@ -128,16 +145,16 @@ func (r *Repository) AcceptFollowRequest(ctx context.Context, requestID, current
 	`
 	_, err = tx.ExecContext(ctx, insertQuery, requesterID, targetID)
 	if err != nil {
-		return fmt.Errorf("failed to insert follow relation: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to insert follow relation: %w", err)
 	}
 
-	return nil
+	return requesterID, nil
 }
 
-func (r *Repository) RejectFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) error {
+func (r *Repository) RejectFollowRequest(ctx context.Context, requestID, currentUserID uuid.UUID) (uuid.UUID, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -156,15 +173,15 @@ func (r *Repository) RejectFollowRequest(ctx context.Context, requestID, current
 	`
 	err = tx.QueryRowContext(ctx, selectQuery, requestID).Scan(&requesterID, &targetID)
 	if err == sql.ErrNoRows {
-		return fmt.Errorf("follow request not found or already handled")
+		return uuid.UUID{}, fmt.Errorf("follow request not found or already handled")
 	}
 	if err != nil {
-		return fmt.Errorf("failed to fetch follow request: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to fetch follow request: %w", err)
 	}
 
 	// 2. İsteğin gerçekten bu kullanıcıya gelip gelmediğini kontrol et
 	if targetID != currentUserID {
-		return fmt.Errorf("unauthorized: follow request not directed to this user")
+		return uuid.UUID{}, fmt.Errorf("unauthorized: follow request not directed to this user")
 	}
 
 	// 3. follow_requests tablosunu güncelle (status = accepted)
@@ -175,8 +192,8 @@ func (r *Repository) RejectFollowRequest(ctx context.Context, requestID, current
 	`
 	_, err = tx.ExecContext(ctx, updateQuery, requestID)
 	if err != nil {
-		return fmt.Errorf("failed to update follow request: %w", err)
+		return uuid.UUID{}, fmt.Errorf("failed to update follow request: %w", err)
 	}
 
-	return nil
+	return requesterID, nil
 }
