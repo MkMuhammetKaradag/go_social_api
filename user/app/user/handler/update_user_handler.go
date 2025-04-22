@@ -14,8 +14,8 @@ type UpdateUserHandler struct {
 type UpdateUserRequest struct {
 	ID        string  `json:"id"`
 	Bio       *string `json:"bio,omitempty"`
-	AvatarURL *string `json:"avatar_url,omitempty"`
-	BannerURL *string `json:"banner_url,omitempty"`
+	// AvatarURL *string `json:"avatar_url,omitempty"`
+	// BannerURL *string `json:"banner_url,omitempty"`
 	Location  *string `json:"location,omitempty"`
 	Website   *string `json:"website,omitempty"`
 	IsPrivate *bool   `json:"is_private,omitempty"`
@@ -33,8 +33,8 @@ func (h *UpdateUserHandler) Handle(fbrCtx *fiber.Ctx, ctx context.Context, req *
 
 	update := domain.UserUpdate{
 		Bio:       req.Bio,
-		AvatarURL: req.AvatarURL,
-		BannerURL: req.BannerURL,
+		// AvatarURL: req.AvatarURL,
+		// BannerURL: req.BannerURL,
 		Location:  req.Location,
 		Website:   req.Website,
 		IsPrivate: req.IsPrivate,

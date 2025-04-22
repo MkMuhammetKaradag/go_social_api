@@ -146,17 +146,17 @@ func (r *Repository) UpdateUser(ctx context.Context, userID string, update domai
 		args = append(args, *update.Bio)
 		argPos++
 	}
-	if update.AvatarURL != nil {
-		setClauses = append(setClauses, fmt.Sprintf("avatar_url = $%d", argPos))
-		args = append(args, *update.AvatarURL)
-		argPos++
-	}
+	// if update.AvatarURL != nil {
+	// 	setClauses = append(setClauses, fmt.Sprintf("avatar_url = $%d", argPos))
+	// 	args = append(args, *update.AvatarURL)
+	// 	argPos++
+	// }
 
-	if update.BannerURL != nil {
-		setClauses = append(setClauses, fmt.Sprintf("banner_url = $%d", argPos))
-		args = append(args, *update.BannerURL)
-		argPos++
-	}
+	// if update.BannerURL != nil {
+	// 	setClauses = append(setClauses, fmt.Sprintf("banner_url = $%d", argPos))
+	// 	args = append(args, *update.BannerURL)
+	// 	argPos++
+	// }
 	if update.Location != nil {
 		setClauses = append(setClauses, fmt.Sprintf("location = $%d", argPos))
 		args = append(args, *update.Location)
@@ -196,6 +196,54 @@ func (r *Repository) UpdateUser(ctx context.Context, userID string, update domai
 	res, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+	if rowsAffected == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+func (r *Repository) UpdateAvatar(ctx context.Context, userID uuid.UUID, avatarURL string) error {
+	query := `
+		UPDATE users
+		SET 
+			avatar_url = $1,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+
+	res, err := r.db.ExecContext(ctx, query, avatarURL, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update user avatar: %w", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get affected rows: %w", err)
+	}
+	if rowsAffected == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+func (r *Repository) UpdateBanner(ctx context.Context, userID uuid.UUID, bannerURL string) error {
+	query := `
+		UPDATE users
+		SET 
+			banner_url = $1,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+
+	res, err := r.db.ExecContext(ctx, query, bannerURL, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update user banner: %w", err)
 	}
 
 	rowsAffected, err := res.RowsAffected()

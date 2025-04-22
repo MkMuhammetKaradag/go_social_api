@@ -39,16 +39,22 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, rabbitMQ Mess
 	updateUserUseCase := userUseCase.NewUpdateUserUseCase(redisRepo, repo)
 	getUserUseCase := userUseCase.NewGetUserUseCase(redisRepo, repo)
 	searchUsersUseCase := userUseCase.NewSearchUserUseCase(redisRepo, repo)
+	updateAvatarUseCase := userUseCase.NewUpdateAvatarUseCase(redisRepo, repo)
+	updateBanerUseCase := userUseCase.NewUpdateBannerUseCase(redisRepo, repo)
 
 	profileUserHandler := user.NewProfileUserHandler(profileUseCase)
 	updateUserHandler := user.NewUpdateUserHandler(updateUserUseCase)
 	getUserHandler := user.NewGetUserHandler(getUserUseCase)
 	searchUsersHandler := user.NewSearchUserHandler(searchUsersUseCase)
+	updateAvatarHandler := user.NewUpdateAvatarHandler(updateAvatarUseCase)
+	updateBannerHandler := user.NewUpdateBannerHandler(updateBanerUseCase)
 
 	return map[string]interface{}{
 		"profile":     profileUserHandler,
 		"update":      updateUserHandler,
 		"getUser":     getUserHandler,
 		"searchusers": searchUsersHandler,
+		"avatar":      updateAvatarHandler,
+		"banner":      updateBannerHandler,
 	}
 }

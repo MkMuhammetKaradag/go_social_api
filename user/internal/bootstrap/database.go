@@ -20,6 +20,8 @@ type Repository interface {
 	UpdateUser(ctx context.Context, userID string, update domain.UserUpdate) error
 	GetUser(ctx context.Context, currrentUserID, targetUserID uuid.UUID) (*domain.User, error)
 	SearchUsers(ctx context.Context, currentUserID uuid.UUID, searchTerm string, page, limit int) ([]*domain.UserSearchResult, error)
+	UpdateAvatar(ctx context.Context, userID uuid.UUID, avatarURL string) error
+	UpdateBanner(ctx context.Context, userID uuid.UUID, bannerURL string) error
 }
 
 type RedisRepository interface {

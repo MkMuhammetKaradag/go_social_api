@@ -25,6 +25,14 @@ type UpdateUserUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context, updateuser domain.UserUpdate) error
 }
 
+type UpdateAvatarUseCase interface {
+	Execute(fbrCtx *fiber.Ctx, ctx context.Context, avatarUrl string) error
+}
+
+type UpdateBannerUseCase interface {
+	Execute(fbrCtx *fiber.Ctx, ctx context.Context, bannerUrl string) error
+}
+
 type RabbitMQ interface {
 	PublishMessage(ctx context.Context, msg messaging.Message) error
 }
@@ -34,6 +42,8 @@ type Repository interface {
 	UpdateUser(ctx context.Context, userID string, update domain.UserUpdate) error
 	GetUser(ctx context.Context, currrentUserID, targetUserID uuid.UUID) (*domain.User, error)
 	SearchUsers(ctx context.Context, currentUserID uuid.UUID, searchTerm string, page, limit int) ([]*domain.UserSearchResult, error)
+	UpdateAvatar(ctx context.Context, userID uuid.UUID, avatarURL string) error
+	UpdateBanner(ctx context.Context, userID uuid.UUID, bannerURL string) error
 }
 
 type RedisRepository interface {
