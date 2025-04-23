@@ -9,7 +9,7 @@ func InitMessaging(handler func(messaging.Message) error) *messaging.RabbitMQ {
 	config := messaging.NewDefaultConfig()
 	config.RetryTypes = []messaging.MessageType{messaging.UserTypes.UserCreated}
 
-	rabbitMQ, err := messaging.NewRabbitMQ(config, messaging.UserService)
+	rabbitMQ, err := messaging.NewRabbitMQ(config, messaging.ChatService)
 	if err != nil {
 		log.Fatalf("RabbitMQ bağlantısı kurulamadı: %v", err)
 	}

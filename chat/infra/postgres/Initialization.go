@@ -31,6 +31,44 @@ follower_id UUID NOT NULL,
   PRIMARY KEY (blocker_id, blocked_id),
   CHECK (blocker_id != blocked_id)
 )`
+
+	conversationTable = `
+  CREATE TABLE IF NOT EXISTS conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  is_group BOOLEAN DEFAULT false,
+  name TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+)`
+
+	conversationParticipantTable = `
+CREATE TABLE IF NOT EXISTS conversation_participants (
+  conversation_id UUID NOT NULL,
+  user_id UUID NOT NULL,
+  joined_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (conversation_id, user_id),
+  FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+)`
+
+	messagesTable = `
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL,
+  sender_id UUID NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  is_edited BOOLEAN DEFAULT false,
+  deleted_at TIMESTAMP,
+  FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+)`
+
+	attachmentTable = `
+CREATE TABLE IF NOT EXISTS attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id UUID NOT NULL,
+  file_url TEXT NOT NULL,
+  file_type TEXT,
+  FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+)`
 )
 
 func initDB(db *sql.DB) error {
@@ -44,7 +82,19 @@ func initDB(db *sql.DB) error {
 	if _, err := db.Exec(createBlockTable); err != nil {
 		return fmt.Errorf("failed to create fallow_requests table: %w", err)
 	}
+	if _, err := db.Exec(conversationTable); err != nil {
+		return fmt.Errorf("failed to create fallow_requests table: %w", err)
+	}
+	if _, err := db.Exec(conversationParticipantTable); err != nil {
+		return fmt.Errorf("failed to create fallow_requests table: %w", err)
+	}
+	if _, err := db.Exec(messagesTable); err != nil {
+		return fmt.Errorf("failed to create fallow_requests table: %w", err)
+	}
 
+	if _, err := db.Exec(attachmentTable); err != nil {
+		return fmt.Errorf("failed to create fallow_requests table: %w", err)
+	}
 	log.Println("Database tables initialized")
 	return nil
 }

@@ -1,6 +1,8 @@
 package bootstrap
 
 import (
+	chat "socialmedia/chat/app/chat/handler"
+	chatUseCase "socialmedia/chat/app/chat/usecase"
 	follow "socialmedia/chat/app/follow/handler"
 	followUseCase "socialmedia/chat/app/follow/usecase"
 	user "socialmedia/chat/app/user/handler"
@@ -35,6 +37,11 @@ func SetupMessageHandlers(repo Repository, redisRepo RedisRepository) map[messag
 }
 
 func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, rabbitMQ Messaging) map[string]interface{} {
+	createConversationUseCase := chatUseCase.NewCreateConversationUseCase(repo)
+	createConversationHandler := chat.NewCreateConversationHandler(createConversationUseCase)
 
-	return map[string]interface{}{}
+	return map[string]interface{}{
+
+		"createconversation": createConversationHandler,
+	}
 }

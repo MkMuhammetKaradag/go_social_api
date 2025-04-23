@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"socialmedia/chat/domain"
 	"socialmedia/chat/internal/initializer"
 	"socialmedia/chat/pkg/config"
 
@@ -15,6 +16,7 @@ type Repository interface {
 	UnblockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error
 	HasBlockRelationship(ctx context.Context, userID1, userID2 uuid.UUID) (bool, error)
 	CreateUser(ctx context.Context, id, username string) error
+	CreateConversation(ctx context.Context, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, error)
 }
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)

@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"socialmedia/chat/domain"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 )
 
@@ -53,6 +55,46 @@ func (r *Repository) CreateUser(ctx context.Context, id, username string) error 
 	_, err := r.db.ExecContext(ctx, query, id, username)
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) CreateConversation(ctx context.Context, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, error) {
+	query := `
+		INSERT INTO conversations (is_group, name)
+		VALUES ($1, $2)
+		RETURNING id, created_at
+	`
+
+	var convo domain.Conversation
+	convo.IsGroup = isGroup
+	convo.Name = name
+
+	err := r.db.QueryRowContext(ctx, query, isGroup, name).
+		Scan(&convo.ID, &convo.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create conversation: %w", err)
+	}
+
+	// Katılımcıları ekle
+	for _, uid := range userIDs {
+		err := r.AddParticipant(ctx, convo.ID, uid)
+		if err != nil {
+			return nil, fmt.Errorf("failed to add participant: %w", err)
+		}
+	}
+
+	return &convo, nil
+}
+func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID uuid.UUID) error {
+	query := `
+		INSERT INTO conversation_participants (conversation_id, user_id)
+		VALUES ($1, $2)
+		ON CONFLICT DO NOTHING
+	`
+	_, err := r.db.ExecContext(ctx, query, conversationID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to add participant: %w", err)
 	}
 	return nil
 }
