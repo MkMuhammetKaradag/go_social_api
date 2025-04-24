@@ -13,7 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo Repository, redisRepo RedisRepository, rabbitMQ Messaging) *fiber.App {
+func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHandlers map[string]interface{}, redisRepo RedisRepository) *fiber.App {
 	serverConfig := server.Config{
 		Port:         config.Server.Port,
 		IdleTimeout:  5 * time.Second,
@@ -29,17 +29,19 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 	})
 
 	createConversationHandler := httpHandlers["createconversation"].(*chat.CreateConversationHandler)
+	createMessageHandler := httpHandlers["createmessage"].(*chat.CreateMessageHandler)
+	chatListenHandler := wsHandlers["chatlisten"].(*chat.ChatWebSocketListenHandler)
 
 	// Korumalı rotalar
 
 	authMiddleware := middlewares.NewAuthMiddleware(redisRepo)
 	protected := app.Group("/", authMiddleware.Authenticate())
 	{
-		// profileHandler := httpHandlers["profile"].(*user.ProfileUserHandler)
 		protected.Post("/createconversation", handler.HandleWithFiber[chat.CreateConversationRequest, chat.CreateConversationResponse](createConversationHandler))
-		protected.Get("/profile", func(c *fiber.Ctx) error {
-			return c.SendString("Hello, World!")
-		})
+		protected.Post("/createmessage", handler.HandleWithFiber[chat.CreateMessageRequest, chat.CreateMessageResponse](createMessageHandler))
+
+		wsRoute := app.Group("/ws")
+		wsRoute.Get("/:chatID", handler.HandleWithFiberWS[chat.ChatWebSocketListenRequest](chatListenHandler))
 
 	}
 

@@ -16,7 +16,8 @@ database:
 redis:
   redisURL: 'localhost:6379'
   password: ''
-  db: 0
+  sessiondb: 0
+  chatdb: 1
 
 jwt:
   secret: 'secret'

@@ -98,3 +98,98 @@ func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID 
 	}
 	return nil
 }
+
+
+func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, error) {
+    // First, check if the sender is a participant in the conversation
+    isParticipant, err := r.IsParticipant(ctx, conversationID, senderID)
+    if err != nil {
+        return nil, fmt.Errorf("failed to check participant status: %w", err)
+    }
+    
+    if !isParticipant {
+        return nil, fmt.Errorf("user is not a participant in this conversation")
+    }
+    
+    // Begin transaction
+    tx, err := r.db.BeginTx(ctx, nil)
+    if err != nil {
+        return nil, fmt.Errorf("failed to begin transaction: %w", err)
+    }
+    defer tx.Rollback()
+    
+    // Insert the message
+    query := `
+        INSERT INTO messages (conversation_id, sender_id, content)
+        VALUES ($1, $2, $3)
+        RETURNING id, created_at, is_edited, deleted_at
+    `
+    
+    var msg domain.Message
+    msg.ConversationID = conversationID
+    msg.SenderID = senderID
+    msg.Content = content
+    
+    err = tx.QueryRowContext(ctx, query, conversationID, senderID, content).
+        Scan(&msg.ID, &msg.CreatedAt, &msg.IsEdited, &msg.DeletedAt)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create message: %w", err)
+    }
+    
+    // Add attachments if provided
+    if len(attachmentURLs) > 0 {
+        for i, fileURL := range attachmentURLs {
+            var fileType string
+            if i < len(attachmentTypes) {
+                fileType = attachmentTypes[i]
+            }
+            
+            attachQuery := `
+                INSERT INTO attachments (message_id, file_url, file_type)
+                VALUES ($1, $2, $3)
+                RETURNING id
+            `
+            
+            var attachmentID uuid.UUID
+            err = tx.QueryRowContext(ctx, attachQuery, msg.ID, fileURL, fileType).
+                Scan(&attachmentID)
+            if err != nil {
+                return nil, fmt.Errorf("failed to add attachment: %w", err)
+            }
+            
+            attachment := domain.Attachment{
+                ID:        attachmentID,
+                MessageID: msg.ID,
+                FileURL:   fileURL,
+                FileType:  fileType,
+            }
+            
+            msg.Attachments = append(msg.Attachments, attachment)
+        }
+    }
+    
+    // Commit transaction
+    if err = tx.Commit(); err != nil {
+        return nil, fmt.Errorf("failed to commit transaction: %w", err)
+    }
+    
+    return &msg, nil
+}
+
+// Helper function to check if a user is a participant in a conversation
+func (r *Repository) IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error) {
+    query := `
+        SELECT EXISTS (
+            SELECT 1 FROM conversation_participants 
+            WHERE conversation_id = $1 AND user_id = $2
+        )
+    `
+    
+    var isParticipant bool
+    err := r.db.QueryRowContext(ctx, query, conversationID, userID).Scan(&isParticipant)
+    if err != nil {
+        return false, fmt.Errorf("failed to check participant status: %w", err)
+    }
+    
+    return isParticipant, nil
+}

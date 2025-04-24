@@ -33,9 +33,10 @@ type DatabaseConfig struct {
 }
 
 type RedisConfig struct {
-	RedisURL string `mapstructure:"redisURL"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db"`
+	RedisURL  string `mapstructure:"redisURL"`
+	Password  string `mapstructure:"password"`
+	SessionDB int    `mapstructure:"sessiondb"`
+	ChatDB    int    `mapstructure:"chatdb"`
 }
 
 func Read() Config {

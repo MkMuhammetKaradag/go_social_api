@@ -13,11 +13,14 @@ import (
 type App struct {
 	config          config.Config
 	repo            Repository
+	myWS            Hub
 	redisRepo       RedisRepository
+	chatRedisRepo   ChatRedisRepository
 	rabbitMQ        Messaging
 	fiberApp        *fiber.App
 	messageHandlers map[messaging.MessageType]MessageHandler
 	httpHandlers    map[string]interface{}
+	wsHandlers      map[string]interface{}
 }
 
 func NewApp(config config.Config) *App {
@@ -35,6 +38,9 @@ func (a *App) initDependencies() {
 	// Database ve Redis başlat
 	a.repo = InitDatabase(a.config)
 	a.redisRepo = InitRedis(a.config)
+	a.chatRedisRepo = InitChatRedis(a.config)
+	redisClient := a.chatRedisRepo.GetRedisClient()
+	a.myWS = InitWebsocket(redisClient)
 
 	// fmt.Printf("initDependencies: repo address: %p\n", a.repo)
 
@@ -45,10 +51,11 @@ func (a *App) initDependencies() {
 	a.rabbitMQ = SetupMessaging(a.messageHandlers, a.config)
 
 	// HTTP handler'larını hazırla
-	a.httpHandlers = SetupHTTPHandlers(a.repo, a.redisRepo, a.rabbitMQ)
+	a.httpHandlers = SetupHTTPHandlers(a.repo, a.redisRepo, a.chatRedisRepo, a.rabbitMQ)
+	a.wsHandlers = SetupWSHandlers(a.repo, a.chatRedisRepo,a.myWS)
 
 	// HTTP sunucusu kurulumu
-	a.fiberApp = SetupServer(a.config, a.httpHandlers, a.repo, a.redisRepo, a.rabbitMQ)
+	a.fiberApp = SetupServer(a.config, a.httpHandlers, a.wsHandlers, a.redisRepo)
 }
 
 func (a *App) Start() {

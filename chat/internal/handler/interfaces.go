@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -17,4 +18,8 @@ type BasicHandler[R Request, Res Response] interface {
 // FiberHandler - fiber.Ctx gerektiren handler'lar için
 type FiberHandler[R Request, Res Response] interface {
 	Handle(fbrCtx *fiber.Ctx, ctx context.Context, req *R) (*Res, error)
+}
+
+type FiberWSHandler[R Request] interface {
+	Handle(c *websocket.Conn, ctx context.Context, req *R)
 }

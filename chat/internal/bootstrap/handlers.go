@@ -36,12 +36,26 @@ func SetupMessageHandlers(repo Repository, redisRepo RedisRepository) map[messag
 	}
 }
 
-func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, rabbitMQ Messaging) map[string]interface{} {
+func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo ChatRedisRepository, rabbitMQ Messaging) map[string]interface{} {
 	createConversationUseCase := chatUseCase.NewCreateConversationUseCase(repo)
+	createMessageUseCase := chatUseCase.NewCreateMessageUseCase(repo, chatRedisRepo)
+
 	createConversationHandler := chat.NewCreateConversationHandler(createConversationUseCase)
+	createMessageHandler := chat.NewCreateMessageHandler(createMessageUseCase)
 
 	return map[string]interface{}{
 
 		"createconversation": createConversationHandler,
+		"createmessage":      createMessageHandler,
+	}
+}
+func SetupWSHandlers(repo Repository, chatRedisRepo ChatRedisRepository, wsHub Hub) map[string]interface{} {
+	chatListenUseCase := chatUseCase.NewChatWebSocketListenUseCase(repo, wsHub)
+
+	chatListenHandler := chat.NewChatWebSocketListenHandler(chatListenUseCase)
+
+	return map[string]interface{}{
+
+		"chatlisten": chatListenHandler,
 	}
 }
