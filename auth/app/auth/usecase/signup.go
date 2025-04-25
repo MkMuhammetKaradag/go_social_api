@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"socialmedia/auth/domain"
-	"socialmedia/shared/messaging"
 
 	"time"
 
@@ -57,22 +56,22 @@ func (u *signUpUseCase) Execute(ctx context.Context, req *SignUpRequest) (*strin
 	if err != nil {
 		return nil, fmt.Errorf("jwt sign error: %w", err)
 	}
+	fmt.Println(activationCode)
+	// emailMessage := messaging.Message{
+	// 	Type:       messaging.EmailTypes.ActivateUser,
+	// 	ToServices: []messaging.ServiceType{messaging.EmailService},
+	// 	Data: map[string]interface{}{
+	// 		"email":           req.Email,
+	// 		"activation_code": activationCode,
+	// 		"template_name":   "activation_email.html",
+	// 		"userName":        req.Username,
+	// 	},
+	// 	Critical: false,
+	// }
 
-	emailMessage := messaging.Message{
-		Type:       messaging.EmailTypes.ActivateUser,
-		ToServices: []messaging.ServiceType{messaging.EmailService},
-		Data: map[string]interface{}{
-			"email":           req.Email,
-			"activation_code": activationCode,
-			"template_name":   "activation_email.html",
-			"userName":        req.Username,
-		},
-		Critical: false,
-	}
-
-	if err := u.rabbitMQ.PublishMessage(ctx, emailMessage); err != nil {
-		return nil, err
-	}
+	// if err := u.rabbitMQ.PublishMessage(ctx, emailMessage); err != nil {
+	// 	return nil, err
+	// }
 
 	return &activationToken, nil
 }

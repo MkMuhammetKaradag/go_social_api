@@ -42,7 +42,7 @@ func (u *unblockUserUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, Blo
 
 	blockMessage := messaging.Message{
 		Type:       messaging.UserTypes.UserUnBlocked,
-		ToServices: []messaging.ServiceType{messaging.UserService},
+		ToServices: []messaging.ServiceType{messaging.UserService, messaging.ChatService},
 		Data: map[string]interface{}{
 			"unblocker_id": currrentUserID,
 			"unblocked_id": BlockedID,

@@ -54,7 +54,7 @@ func (u *followRequestUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, f
 		}
 		followMessage := messaging.Message{
 			Type:       messaging.UserTypes.FollowRequest,
-			ToServices: []messaging.ServiceType{messaging.UserService},
+			ToServices: []messaging.ServiceType{messaging.UserService, messaging.ChatService},
 			Data: map[string]interface{}{
 				"follower_id":  currrentUserID,
 				"following_id": followingID,
@@ -74,7 +74,7 @@ func (u *followRequestUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, f
 		}
 		followMessage := messaging.Message{
 			Type:       messaging.UserTypes.UserFollowed,
-			ToServices: []messaging.ServiceType{messaging.UserService},
+			ToServices: []messaging.ServiceType{messaging.UserService, messaging.ChatService},
 			Data: map[string]interface{}{
 				"follower_id":  currrentUserID,
 				"following_id": followingID,

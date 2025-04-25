@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"socialmedia/auth/domain"
 	"socialmedia/shared/messaging"
@@ -26,12 +27,12 @@ func NewActivateUseCase(repository Repository, jwtHelper JwtHelper, rabbitMQ Rab
 func (u *activateUseCase) Execute(ctx context.Context, activationToken, activationCode string) (*domain.AuthResponse, error) {
 	// userCreatedMessage := messaging.Message{
 	// 	Type:       messaging.UserTypes.UserCreated,
-	// 	ToServices: []messaging.ServiceType{messaging.UserService, messaging.FallowService},
+	// 	ToServices: []messaging.ServiceType{messaging.UserService, messaging.FollowService},
 	// 	RetryCount: 0,
 	// 	Data: map[string]interface{}{
-	// 		"id":       "5973d8e9-2279-4b12-9b99-b3908fe196a9",
-	// 		"email":    "mail@gmail.com",
-	// 		"username": "username",
+	// 		"id":       "4973d8e9-2279-4b12-9b99-b3908fe196a9",
+	// 		"email":    "test-1@mail.com",
+	// 		"username": "test-1",
 	// 	},
 	// }
 
@@ -62,7 +63,7 @@ func (u *activateUseCase) Execute(ctx context.Context, activationToken, activati
 
 	userCreatedMessage := messaging.Message{
 		Type:       messaging.UserTypes.UserCreated,
-		ToServices: []messaging.ServiceType{messaging.UserService},
+		ToServices: []messaging.ServiceType{messaging.UserService, messaging.ChatService, messaging.FollowService},
 		Data: map[string]interface{}{
 			"id":       response.ID,
 			"email":    response.Email,
@@ -72,7 +73,7 @@ func (u *activateUseCase) Execute(ctx context.Context, activationToken, activati
 	}
 
 	if err := u.rabbitMQ.PublishMessage(context.Background(), userCreatedMessage); err != nil {
-		// log.Printf("User creation message could not be sent: %v", err)
+		log.Printf("User creation message could not be sent: %v", err)
 		return nil, err
 	}
 	// response := &domain.AuthResponse{

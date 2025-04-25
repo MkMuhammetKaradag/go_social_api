@@ -30,8 +30,17 @@ func (u *createConversationUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 	if err != nil {
 		return err
 	}
-	userIDs = append(userIDs, currrentUserID)
 
+	userIDMap := make(map[uuid.UUID]struct{})
+	for _, id := range userIDs {
+		userIDMap[id] = struct{}{}
+	}
+	if _, exists := userIDMap[currrentUserID]; !exists {
+		userIDs = append(userIDs, currrentUserID)
+	}
+	if len(userIDs) <= 2 {
+		isGroup = false
+	}
 	_, err = u.repository.CreateConversation(ctx, currrentUserID, isGroup, name, userIDs)
 	if err != nil {
 		return err
