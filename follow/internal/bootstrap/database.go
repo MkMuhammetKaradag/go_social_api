@@ -11,6 +11,8 @@ import (
 
 type Repository interface {
 	CreateUser(ctx context.Context, id, username string) error
+	UpdateUser(ctx context.Context, userID uuid.UUID, userName, avatarURL *string, isPrivate *bool) error
+	
 	IsPrivate(ctx context.Context, userID uuid.UUID) (bool, error)
 	CreateFollow(ctx context.Context, followerID, followingID uuid.UUID) error
 	CreateFollowRequest(ctx context.Context, requesterID, targetID uuid.UUID) error

@@ -8,7 +8,7 @@ import (
 func StartUserConsumer(handler func(messaging.Message) error) (*messaging.RabbitMQ, error) {
 	messageConfig := messaging.NewDefaultConfig()
 
-	rabbit, err := messaging.NewRabbitMQ(messageConfig, messaging.UserService)
+	rabbit, err := messaging.NewRabbitMQ(messageConfig, messaging.ChatService)
 	if err != nil {
 		log.Fatal("RabbitMQ bağlantı hatası:", err)
 	}

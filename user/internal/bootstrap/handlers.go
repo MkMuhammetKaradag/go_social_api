@@ -36,10 +36,10 @@ func SetupMessageHandlers(repo Repository, redisRepo RedisRepository) map[messag
 
 func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, rabbitMQ Messaging) map[string]interface{} {
 	profileUseCase := userUseCase.NewProfileUseCase(redisRepo, repo)
-	updateUserUseCase := userUseCase.NewUpdateUserUseCase(redisRepo, repo)
+	updateUserUseCase := userUseCase.NewUpdateUserUseCase(redisRepo, repo, rabbitMQ)
 	getUserUseCase := userUseCase.NewGetUserUseCase(redisRepo, repo)
 	searchUsersUseCase := userUseCase.NewSearchUserUseCase(redisRepo, repo)
-	updateAvatarUseCase := userUseCase.NewUpdateAvatarUseCase(redisRepo, repo)
+	updateAvatarUseCase := userUseCase.NewUpdateAvatarUseCase(redisRepo, repo, rabbitMQ)
 	updateBanerUseCase := userUseCase.NewUpdateBannerUseCase(redisRepo, repo)
 
 	profileUserHandler := user.NewProfileUserHandler(profileUseCase)

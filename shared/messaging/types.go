@@ -26,6 +26,7 @@ var UserTypes = struct {
 	UnFollowRequest MessageType
 	UserBlocked     MessageType
 	UserUnBlocked   MessageType
+	UserUpdated     MessageType
 }{
 	UserCreated:     "user_created",
 	UserFollowed:    "user_followed",
@@ -33,6 +34,7 @@ var UserTypes = struct {
 	UnFollowRequest: "unfollow_request",
 	UserBlocked:     "user_blocked",
 	UserUnBlocked:   "user_unblocked",
+	UserUpdated:     "user_updated",
 }
 
 var FollowTypes = struct {
@@ -41,17 +43,4 @@ var FollowTypes = struct {
 	UserCreated: "user_created",
 }
 var ChatTypes = struct {
-	UserCreated     MessageType
-	UserFollowed    MessageType
-	FollowRequest   MessageType
-	UnFollowRequest MessageType
-	UserBlocked     MessageType
-	UserUnBlocked   MessageType
-}{
-	UserCreated:     "user_created",
-	UserFollowed:    "user_followed",
-	FollowRequest:   "follow_request",
-	UnFollowRequest: "unfollow_request",
-	UserBlocked:     "user_blocked",
-	UserUnBlocked:   "user_unblocked",
-}
+}{}

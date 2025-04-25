@@ -8,6 +8,7 @@ var allowedMessageTypes = map[ServiceType][]MessageType{
 	},
 	UserService: {
 		"user_created",
+		"user_updated",
 		"user_followed",
 		"follow_request",
 		"unfollow_request",
