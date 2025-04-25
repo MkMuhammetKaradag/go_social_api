@@ -59,7 +59,7 @@ func (r *Repository) CreateUser(ctx context.Context, id, username string) error 
 	return nil
 }
 
-func (r *Repository) CreateConversation(ctx context.Context, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, error) {
+func (r *Repository) CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, error) {
 	query := `
 		INSERT INTO conversations (is_group, name)
 		VALUES ($1, $2)
@@ -78,7 +78,7 @@ func (r *Repository) CreateConversation(ctx context.Context, isGroup bool, name 
 
 	// Katılımcıları ekle
 	for _, uid := range userIDs {
-		err := r.AddParticipant(ctx, convo.ID, uid)
+		err := r.AddParticipant(ctx, convo.ID, uid, currrentUserID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to add participant: %w", err)
 		}
@@ -86,110 +86,147 @@ func (r *Repository) CreateConversation(ctx context.Context, isGroup bool, name 
 
 	return &convo, nil
 }
-func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID uuid.UUID) error {
+func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID uuid.UUID, currentUserID uuid.UUID) error {
+	isPrivate, err := r.IsUserPrivate(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if isPrivate {
+		areFriends, err := r.AreUsersFriends(ctx, currentUserID, userID)
+		if err != nil {
+			return err
+		}
+		if !areFriends {
+			return fmt.Errorf("user %s is private and not friends with %s", userID, currentUserID)
+		}
+	}
+
 	query := `
 		INSERT INTO conversation_participants (conversation_id, user_id)
 		VALUES ($1, $2)
 		ON CONFLICT DO NOTHING
 	`
-	_, err := r.db.ExecContext(ctx, query, conversationID, userID)
+	_, err = r.db.ExecContext(ctx, query, conversationID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to add participant: %w", err)
 	}
 	return nil
 }
 
-
 func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, error) {
-    // First, check if the sender is a participant in the conversation
-    isParticipant, err := r.IsParticipant(ctx, conversationID, senderID)
-    if err != nil {
-        return nil, fmt.Errorf("failed to check participant status: %w", err)
-    }
-    
-    if !isParticipant {
-        return nil, fmt.Errorf("user is not a participant in this conversation")
-    }
-    
-    // Begin transaction
-    tx, err := r.db.BeginTx(ctx, nil)
-    if err != nil {
-        return nil, fmt.Errorf("failed to begin transaction: %w", err)
-    }
-    defer tx.Rollback()
-    
-    // Insert the message
-    query := `
+	// First, check if the sender is a participant in the conversation
+	isParticipant, err := r.IsParticipant(ctx, conversationID, senderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check participant status: %w", err)
+	}
+
+	if !isParticipant {
+		return nil, fmt.Errorf("user is not a participant in this conversation")
+	}
+
+	// Begin transaction
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Insert the message
+	query := `
         INSERT INTO messages (conversation_id, sender_id, content)
         VALUES ($1, $2, $3)
         RETURNING id, created_at, is_edited, deleted_at
     `
-    
-    var msg domain.Message
-    msg.ConversationID = conversationID
-    msg.SenderID = senderID
-    msg.Content = content
-    
-    err = tx.QueryRowContext(ctx, query, conversationID, senderID, content).
-        Scan(&msg.ID, &msg.CreatedAt, &msg.IsEdited, &msg.DeletedAt)
-    if err != nil {
-        return nil, fmt.Errorf("failed to create message: %w", err)
-    }
-    
-    // Add attachments if provided
-    if len(attachmentURLs) > 0 {
-        for i, fileURL := range attachmentURLs {
-            var fileType string
-            if i < len(attachmentTypes) {
-                fileType = attachmentTypes[i]
-            }
-            
-            attachQuery := `
+
+	var msg domain.Message
+	msg.ConversationID = conversationID
+	msg.SenderID = senderID
+	msg.Content = content
+
+	err = tx.QueryRowContext(ctx, query, conversationID, senderID, content).
+		Scan(&msg.ID, &msg.CreatedAt, &msg.IsEdited, &msg.DeletedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create message: %w", err)
+	}
+
+	// Add attachments if provided
+	if len(attachmentURLs) > 0 {
+		for i, fileURL := range attachmentURLs {
+			var fileType string
+			if i < len(attachmentTypes) {
+				fileType = attachmentTypes[i]
+			}
+
+			attachQuery := `
                 INSERT INTO attachments (message_id, file_url, file_type)
                 VALUES ($1, $2, $3)
                 RETURNING id
             `
-            
-            var attachmentID uuid.UUID
-            err = tx.QueryRowContext(ctx, attachQuery, msg.ID, fileURL, fileType).
-                Scan(&attachmentID)
-            if err != nil {
-                return nil, fmt.Errorf("failed to add attachment: %w", err)
-            }
-            
-            attachment := domain.Attachment{
-                ID:        attachmentID,
-                MessageID: msg.ID,
-                FileURL:   fileURL,
-                FileType:  fileType,
-            }
-            
-            msg.Attachments = append(msg.Attachments, attachment)
-        }
-    }
-    
-    // Commit transaction
-    if err = tx.Commit(); err != nil {
-        return nil, fmt.Errorf("failed to commit transaction: %w", err)
-    }
-    
-    return &msg, nil
+
+			var attachmentID uuid.UUID
+			err = tx.QueryRowContext(ctx, attachQuery, msg.ID, fileURL, fileType).
+				Scan(&attachmentID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to add attachment: %w", err)
+			}
+
+			attachment := domain.Attachment{
+				ID:        attachmentID,
+				MessageID: msg.ID,
+				FileURL:   fileURL,
+				FileType:  fileType,
+			}
+
+			msg.Attachments = append(msg.Attachments, attachment)
+		}
+	}
+
+	// Commit transaction
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return &msg, nil
 }
 
 // Helper function to check if a user is a participant in a conversation
 func (r *Repository) IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error) {
-    query := `
+	query := `
         SELECT EXISTS (
             SELECT 1 FROM conversation_participants 
             WHERE conversation_id = $1 AND user_id = $2
         )
     `
-    
-    var isParticipant bool
-    err := r.db.QueryRowContext(ctx, query, conversationID, userID).Scan(&isParticipant)
-    if err != nil {
-        return false, fmt.Errorf("failed to check participant status: %w", err)
-    }
-    
-    return isParticipant, nil
+
+	var isParticipant bool
+	err := r.db.QueryRowContext(ctx, query, conversationID, userID).Scan(&isParticipant)
+	if err != nil {
+		return false, fmt.Errorf("failed to check participant status: %w", err)
+	}
+
+	return isParticipant, nil
+}
+
+func (r *Repository) IsUserPrivate(ctx context.Context, userID uuid.UUID) (bool, error) {
+	query := `SELECT is_private FROM users_cache WHERE id = $1`
+	var isPrivate bool
+	err := r.db.QueryRowContext(ctx, query, userID).Scan(&isPrivate)
+	if err != nil {
+		return false, fmt.Errorf("failed to check privacy status: %w", err)
+	}
+	return isPrivate, nil
+}
+
+func (r *Repository) AreUsersFriends(ctx context.Context, userA, userB uuid.UUID) (bool, error) {
+	query := `
+		SELECT COUNT(*) FROM follows_cache
+		WHERE follower_id = $1 AND following_id = $2 AND status = 'following'
+	`
+	var count int
+	err := r.db.QueryRowContext(ctx, query, userA, userB).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("failed to check friendship: %w", err)
+	}
+	return count > 0, nil
 }

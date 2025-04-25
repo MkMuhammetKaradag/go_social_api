@@ -18,8 +18,9 @@ type Repository interface {
 	HasBlockRelationship(ctx context.Context, userID1, userID2 uuid.UUID) (bool, error)
 	CreateUser(ctx context.Context, id, username string) error
 
-	CreateConversation(ctx context.Context, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, error)
+	CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, error)
 	CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, error)
+	IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error)
 }
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)

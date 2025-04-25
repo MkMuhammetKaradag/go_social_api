@@ -32,7 +32,7 @@ func (u *createConversationUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 	}
 	userIDs = append(userIDs, currrentUserID)
 
-	_, err = u.repository.CreateConversation(ctx, isGroup, name, userIDs)
+	_, err = u.repository.CreateConversation(ctx, currrentUserID, isGroup, name, userIDs)
 	if err != nil {
 		return err
 

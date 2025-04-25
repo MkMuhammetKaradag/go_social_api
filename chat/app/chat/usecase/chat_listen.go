@@ -7,6 +7,7 @@ import (
 
 	websocketFiber "github.com/gofiber/contrib/websocket"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
 type chatWebSocketListenUseCase struct {
@@ -21,11 +22,23 @@ func NewChatWebSocketListenUseCase(repository Repository, hub Hub) ChatWebSocket
 	}
 }
 
-func (u *chatWebSocketListenUseCase) Execute(c *websocketFiber.Conn, userID, conversationID uuid.UUID) {
+func (u *chatWebSocketListenUseCase) Execute(c *websocketFiber.Conn, ctx context.Context, userID, conversationID uuid.UUID) {
+
+	isMember, err := u.repository.IsParticipant(ctx, conversationID, userID)
+
+	if err != nil {
+		message := websocketFiber.FormatCloseMessage(websocketFiber.CloseInternalServerErr, "Server Error")
+		c.Conn.WriteMessage(websocketFiber.CloseMessage, message)
+		c.Conn.Close()
+		return
+	} else if !isMember {
+		message := websocketFiber.FormatCloseMessage(websocket.CloseNormalClosure, "Unauthorized access")
+		c.Conn.WriteMessage(websocketFiber.CloseMessage, message)
+		c.Conn.Close()
+		return
+	}
 	channelName := fmt.Sprintf("conversation:%s", conversationID)
 	go u.hub.ListenRedisSendMessage(context.Background(), channelName)
-
-	fmt.Println(userID, conversationID)
 	conn := c.Conn
 	client := &domain.Client{
 		ConversationID: conversationID,

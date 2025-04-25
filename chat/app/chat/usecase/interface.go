@@ -17,7 +17,7 @@ type CreateMessageUseCase interface {
 	Execute(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs, attachmentTypes []string) (uuid.UUID, error)
 }
 type ChatWebSocketListenUseCase interface {
-	Execute(c *websocketFiber.Conn, userID, conversationID uuid.UUID)
+	Execute(c *websocketFiber.Conn, ctx context.Context, userID, conversationID uuid.UUID)
 }
 
 type Hub interface {
@@ -32,8 +32,9 @@ type RabbitMQ interface {
 }
 
 type Repository interface {
-	CreateConversation(ctx context.Context, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, error)
+	CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, error)
 	CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, error)
+	IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error)
 }
 
 type RedisRepository interface {

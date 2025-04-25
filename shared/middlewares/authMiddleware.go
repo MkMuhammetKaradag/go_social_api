@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/gofiber/contrib/websocket"
@@ -27,7 +26,7 @@ func (m *AuthMiddleware) Authenticate() fiber.Handler {
 		var token string
 
 		if strings.Contains(c.Get("Connection"), "Upgrade") && c.Get("Upgrade") == "websocket" {
-			fmt.Println("hello websocket")
+
 			token = c.Query("token")
 			if token == "" {
 				token = c.Get("session_id")

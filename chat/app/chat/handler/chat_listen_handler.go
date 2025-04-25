@@ -38,7 +38,7 @@ func (h *ChatWebSocketListenHandler) Handle(c *websocketFiber.Conn, ctx context.
 		return
 	}
 	fmt.Println(conversationID)
-	h.usecase.Execute(c, userID, conversationID)
+	h.usecase.Execute(c, ctx,userID, conversationID)
 
 }
 func getUserIDFromWS(c *websocketFiber.Conn) (uuid.UUID, error) {
