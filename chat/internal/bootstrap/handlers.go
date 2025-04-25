@@ -24,10 +24,13 @@ func SetupMessageHandlers(repo Repository, redisRepo RedisRepository) map[messag
 
 	// User related use cases and handlers
 	createUserUseCase := userUseCase.NewCreateUserUseCase(repo)
+	updateUserUseCase := userUseCase.NewUpdateUserUseCase(repo)
 	createUserHandler := user.NewCreatedUserHandler(createUserUseCase)
+	updateUserHandler := user.NewUpdatedUserHandler(updateUserUseCase)
 
 	return map[messaging.MessageType]MessageHandler{
 		messaging.UserTypes.UserCreated:     createUserHandler,
+		messaging.UserTypes.UserUpdated:     updateUserHandler,
 		messaging.UserTypes.UserFollowed:    followRequestHandler,
 		messaging.UserTypes.FollowRequest:   followRequestHandler,
 		messaging.UserTypes.UnFollowRequest: unfollowRequestHandler,

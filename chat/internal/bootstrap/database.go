@@ -16,7 +16,9 @@ type Repository interface {
 	BlockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error
 	UnblockUser(ctx context.Context, blockerID, blockedID uuid.UUID) error
 	HasBlockRelationship(ctx context.Context, userID1, userID2 uuid.UUID) (bool, error)
+
 	CreateUser(ctx context.Context, id, username string) error
+	UpdateUser(ctx context.Context, userID uuid.UUID, userName, avatarURL *string, isPrivate *bool) error
 
 	CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, error)
 	CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, error)
