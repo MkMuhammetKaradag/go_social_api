@@ -36,7 +36,7 @@ func (u *User) CanViewDetails() bool {
 
 type UserUpdate struct {
 	// ID        uuid.UUID   banner_url
-	Bio       *string `json:"bio,omitempty"`
+	Bio *string `json:"bio,omitempty"`
 	// AvatarURL *string `json:"avatar_url,omitempty"`
 	// BannerURL *string `json:"banner_url,omitempty"`
 	Location  *string `json:"location,omitempty"`
@@ -48,4 +48,10 @@ type UserSearchResult struct {
 	ID        uuid.UUID `json:"id"`
 	Username  string    `json:"username"`
 	AvatarURL *string   `json:"avatar_url"`
+}
+
+type UserStatusNotification struct {
+	UserID    uuid.UUID `json:"user_id"`
+	Status    string    `json:"status"`
+	Timestamp int64     `json:"timestamp"`
 }

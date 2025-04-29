@@ -35,3 +35,21 @@ func InitDatabase(config config.Config) Repository {
 func InitRedis(config config.Config) RedisRepository {
 	return initializer.InitRedis(config)
 }
+
+func InitUserRedis(config config.Config) UserRedisRepository {
+	return initializer.InitUserRedis(config)
+}
+func InitWebsocket(redisRepo UserRedisRepository) Hub {
+	return initializer.InitWebsocket(redisRepo)
+}
+
+type UserRedisRepository interface {
+	PublishUserStatus(ctx context.Context, userID uuid.UUID, status string)
+	
+	// GetRedisClient() *redis.Client
+}
+type Hub interface {
+	Run()
+	RegisterClient(client *domain.Client)
+	UnregisterClient(client *domain.Client)
+}

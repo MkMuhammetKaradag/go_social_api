@@ -14,10 +14,13 @@ type App struct {
 	config          config.Config
 	repo            Repository
 	redisRepo       RedisRepository
+	userRedisRepo   UserRedisRepository
+	myWS            Hub
 	rabbitMQ        Messaging
 	fiberApp        *fiber.App
 	messageHandlers map[messaging.MessageType]MessageHandler
 	httpHandlers    map[string]interface{}
+	wsHandlers      map[string]interface{}
 }
 
 func NewApp(config config.Config) *App {
@@ -36,6 +39,9 @@ func (a *App) initDependencies() {
 	a.repo = InitDatabase(a.config)
 	a.redisRepo = InitRedis(a.config)
 
+	a.userRedisRepo = InitUserRedis(a.config)
+	a.myWS = InitWebsocket(a.userRedisRepo)
+
 	// fmt.Printf("initDependencies: repo address: %p\n", a.repo)
 
 	// Message handler'larını hazırla
@@ -47,8 +53,13 @@ func (a *App) initDependencies() {
 	// HTTP handler'larını hazırla
 	a.httpHandlers = SetupHTTPHandlers(a.repo, a.redisRepo, a.rabbitMQ)
 
+	a.wsHandlers = SetupWSHandlers(a.repo, a.userRedisRepo, a.myWS)
+
+
 	// HTTP sunucusu kurulumu
-	a.fiberApp = SetupServer(a.config, a.httpHandlers, a.repo, a.redisRepo, a.rabbitMQ)
+	a.fiberApp = SetupServer(a.config, a.httpHandlers,a.wsHandlers, a.repo, a.redisRepo, a.rabbitMQ)
+
+
 }
 
 func (a *App) Start() {

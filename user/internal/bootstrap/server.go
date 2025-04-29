@@ -12,7 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo Repository, redisRepo RedisRepository, rabbitMQ Messaging) *fiber.App {
+func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHandlers map[string]interface{}, repo Repository, redisRepo RedisRepository, rabbitMQ Messaging) *fiber.App {
 	serverConfig := server.Config{
 		Port:         config.Server.Port,
 		IdleTimeout:  5 * time.Second,
@@ -47,6 +47,10 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 		protected.Post("/avatar", handler.HandleWithFiber[user.UpdateAvatarRequest, user.UpdateAvatarResponse](updateAvatarHandler))
 		protected.Post("/banner", handler.HandleWithFiber[user.UpdateBannerRequest, user.UpdateBannerResponse](updateBannerHandler))
 		protected.Get("/:id", handler.HandleWithFiber[user.GetUserRequest, user.GetUserResponse](getUserHandler))
+
+		wsRoute := app.Group("/ws")
+		userStatusPublishHandler := wsHandlers["publishstatus"].(*user.UserStatusPublishHandler)
+		wsRoute.Get("/hi", handler.HandleWithFiberWS[user.UserStatusPublishRequest](userStatusPublishHandler))
 
 	}
 

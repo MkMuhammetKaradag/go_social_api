@@ -7,7 +7,8 @@ import (
 
 	websocketFiber "github.com/gofiber/contrib/websocket"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
+
+	"github.com/gofiber/contrib/websocket"
 )
 
 type chatWebSocketListenUseCase struct {

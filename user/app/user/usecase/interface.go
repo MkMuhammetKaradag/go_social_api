@@ -5,6 +5,7 @@ import (
 	"socialmedia/shared/messaging"
 	"socialmedia/user/domain"
 
+	websocketFiber "github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
@@ -33,6 +34,10 @@ type UpdateBannerUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context, bannerUrl string) error
 }
 
+type UserStatusPublishUseCase interface {
+	Execute(c *websocketFiber.Conn, ctx context.Context, currentUserID uuid.UUID)
+}
+
 type RabbitMQ interface {
 	PublishMessage(ctx context.Context, msg messaging.Message) error
 }
@@ -48,4 +53,9 @@ type Repository interface {
 
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)
+}
+type Hub interface {
+	Run()
+	RegisterClient(client *domain.Client)
+	UnregisterClient(client *domain.Client)
 }

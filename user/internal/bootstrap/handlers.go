@@ -58,3 +58,13 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, rabbitMQ Mess
 		"banner":      updateBannerHandler,
 	}
 }
+func SetupWSHandlers(repo Repository, userRedisRepo UserRedisRepository, wsHub Hub) map[string]interface{} {
+	publishStatusUseCase := userUseCase.NewUserStatusPublishUseCase(repo, wsHub)
+
+	publishStatusHandler := user.NewUserStatusPublishHandler(publishStatusUseCase)
+
+	return map[string]interface{}{
+
+		"publishstatus": publishStatusHandler,
+	}
+}
