@@ -23,8 +23,10 @@ type ChatWebSocketListenUseCase interface {
 type Hub interface {
 	Run()
 	ListenRedisSendMessage(ctx context.Context, channelName string)
-	RegisterClient(client *domain.Client)
-	UnregisterClient(client *domain.Client)
+	RegisterClient(client *domain.Client, userID uuid.UUID)
+	UnregisterClient(client *domain.Client, userID uuid.UUID)
+	LoadConversationMembers(ctx context.Context, conversationID uuid.UUID, repo Repository) error
+	SendInitialUserStatuses(client *domain.Client, conversationID uuid.UUID)
 }
 
 type RabbitMQ interface {
@@ -35,6 +37,7 @@ type Repository interface {
 	CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, error)
 	CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, error)
 	IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error)
+	GetParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error)
 }
 
 type RedisRepository interface {

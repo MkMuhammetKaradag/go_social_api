@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+
 	"socialmedia/chat/app/chat/usecase"
 
 	"github.com/gofiber/fiber/v2"
@@ -30,5 +31,6 @@ func (h *CreateConversationHandler) Handle(fbrCtx *fiber.Ctx, ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
+
 	return &CreateConversationResponse{Message: "chat created"}, nil
 }

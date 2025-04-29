@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"socialmedia/user/domain"
 	"time"
 
@@ -40,13 +39,13 @@ func (r *UserRedisRepository) PublishUserStatus(ctx context.Context, userID uuid
 
 	data, err := json.Marshal(msg)
 	if err != nil {
-		log.Println("JSON marshal error:", err)
+		fmt.Println("JSON marshal error:", err)
 		return
 	}
 
 	err = r.client.Publish(ctx, "user:status", data).Err()
 	if err != nil {
-		log.Println("Redis publish error:", err)
+		fmt.Println("Redis publish error:", err)
 	}
 
 }

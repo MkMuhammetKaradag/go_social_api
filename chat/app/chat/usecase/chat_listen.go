@@ -24,32 +24,43 @@ func NewChatWebSocketListenUseCase(repository Repository, hub Hub) ChatWebSocket
 }
 
 func (u *chatWebSocketListenUseCase) Execute(c *websocketFiber.Conn, ctx context.Context, userID, conversationID uuid.UUID) {
-
+	// Kullanıcının sohbetin bir üyesi olup olmadığını kontrol et
 	isMember, err := u.repository.IsParticipant(ctx, conversationID, userID)
-
+	
 	if err != nil {
 		message := websocketFiber.FormatCloseMessage(websocketFiber.CloseInternalServerErr, "Server Error")
 		c.Conn.WriteMessage(websocketFiber.CloseMessage, message)
 		c.Conn.Close()
 		return
-	} else if !isMember {
+	} else if !isMember {a
 		message := websocketFiber.FormatCloseMessage(websocket.CloseNormalClosure, "Unauthorized access")
 		c.Conn.WriteMessage(websocketFiber.CloseMessage, message)
 		c.Conn.Close()
 		return
 	}
+
+	// Redis kanalını dinlemeye başla
 	channelName := fmt.Sprintf("conversation:%s", conversationID)
 	go u.hub.ListenRedisSendMessage(context.Background(), channelName)
+
+	// Conversation üyelerini yükle (eğer daha önce yüklenmemişse)
+	_ = u.hub.LoadConversationMembers(ctx, conversationID, u.repository)
+
+	// Client oluştur ve hub'a kaydet
 	conn := c.Conn
 	client := &domain.Client{
 		ConversationID: conversationID,
 		Conn:           conn,
 	}
-	fmt.Println(client)
-	u.hub.RegisterClient(client)
+	
+	// Client'i hub'a kaydet (userID ile birlikte)
+	u.hub.RegisterClient(client, userID)
+	
+	// Sohbetteki tüm kullanıcıların durumlarını client'a gönder
+	u.hub.SendInitialUserStatuses(client, conversationID)
 
 	defer func() {
-		u.hub.UnregisterClient(client)
+		u.hub.UnregisterClient(client, userID)
 	}()
 
 	for {
@@ -58,5 +69,4 @@ func (u *chatWebSocketListenUseCase) Execute(c *websocketFiber.Conn, ctx context
 			break
 		}
 	}
-
 }

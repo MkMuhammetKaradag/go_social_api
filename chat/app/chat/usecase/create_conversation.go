@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"socialmedia/chat/domain"
 	"socialmedia/shared/middlewares"
 
@@ -30,6 +31,7 @@ func (u *createConversationUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 	if err != nil {
 		return err
 	}
+	fmt.Println("hello")
 
 	userIDMap := make(map[uuid.UUID]struct{})
 	for _, id := range userIDs {
@@ -38,6 +40,7 @@ func (u *createConversationUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 	if _, exists := userIDMap[currrentUserID]; !exists {
 		userIDs = append(userIDs, currrentUserID)
 	}
+	fmt.Println("exists")
 	if len(userIDs) <= 2 {
 		isGroup = false
 	}

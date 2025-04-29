@@ -276,3 +276,24 @@ func (r *Repository) AreUsersFriends(ctx context.Context, userA, userB uuid.UUID
 	}
 	return count > 0, nil
 }
+func (r *Repository) GetParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error) {
+	// Örnek SQL sorgusu
+	query := `SELECT user_id FROM conversation_participants WHERE conversation_id = $1`
+
+	rows, err := r.db.QueryContext(ctx, query, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var participants []uuid.UUID
+	for rows.Next() {
+		var userID uuid.UUID
+		if err := rows.Scan(&userID); err != nil {
+			return nil, err
+		}
+		participants = append(participants, userID)
+	}
+
+	return participants, nil
+}
