@@ -1,0 +1,198 @@
+package ws
+
+import (
+	"context"
+	"log"
+
+	"socialmedia/chat/app/chat/usecase"
+	"socialmedia/chat/domain"
+	"sync"
+
+	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
+)
+
+// Hub, WebSocket bağlantılarını yöneten ana bileşen
+type Hub struct {
+	// Tüm aktif istemciler - conversationID -> client -> bool
+	clients map[uuid.UUID]map[*domain.Client]bool
+
+	// Sohbet konuşmalarında hangi kullanıcıların olduğunu takip eder
+	// conversationID -> userID -> bool
+	conversationUsers map[uuid.UUID]map[string]bool
+
+	// İstemci kayıt/silme kanalları
+	register   chan *domain.Client
+	unregister chan *domain.Client
+
+	// Redis bağlantısı
+	redisClient *redis.Client
+
+	// Alt bileşenler
+	messageHub *MessageHub
+	statusHub  *StatusHub
+
+	// Eşzamanlılık koruması
+	mutex sync.RWMutex
+}
+
+// NewHub creates a new Hub instance
+func NewHub(redisClient *redis.Client) *Hub {
+	hub := &Hub{
+		clients:           make(map[uuid.UUID]map[*domain.Client]bool),
+		conversationUsers: make(map[uuid.UUID]map[string]bool),
+		register:          make(chan *domain.Client),
+		unregister:        make(chan *domain.Client),
+		redisClient:       redisClient,
+	}
+
+	// Alt bileşenleri oluştur
+	hub.messageHub = NewMessageHub(redisClient, hub)
+	hub.statusHub = NewStatusHub(redisClient, hub)
+
+	return hub
+}
+
+// Run başlatır tüm Hub aktivitelerini
+func (h *Hub) Run(ctx context.Context) {
+	// Ana hub döngüsü
+	go func() {
+		for {
+			select {
+			case client := <-h.register:
+				h.registerClient(client)
+			case client := <-h.unregister:
+				h.unregisterClient(client)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	// Alt bileşenleri başlat
+	go h.messageHub.Run(ctx)
+	go h.statusHub.Run(ctx)
+}
+
+// RegisterClient bir WebSocket bağlantısını Hub'a kaydeder ve kullanıcıyı sohbetle ilişkilendirir
+func (h *Hub) RegisterClient(client *domain.Client, userID uuid.UUID) {
+	h.register <- client
+
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	// Kullanıcıyı sohbetle ilişkilendir
+	if _, ok := h.conversationUsers[client.ConversationID]; !ok {
+		h.conversationUsers[client.ConversationID] = make(map[string]bool)
+	}
+	h.conversationUsers[client.ConversationID][userID.String()] = true
+
+	// Kullanıcıya mevcut durumları gönder
+	go h.statusHub.SendInitialUserStatuses(client, client.ConversationID)
+}
+
+// UnregisterClient removes a client from the hub
+func (h *Hub) UnregisterClient(client *domain.Client, userID uuid.UUID) {
+	h.unregister <- client
+
+	// İlişkilendirmeyi kaldırma işlemini unregisterClient içinde yapacağız
+}
+
+// registerClient handles client registration (internal)
+func (h *Hub) registerClient(client *domain.Client) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	if _, ok := h.clients[client.ConversationID]; !ok {
+		h.clients[client.ConversationID] = make(map[*domain.Client]bool)
+	}
+	h.clients[client.ConversationID][client] = true
+}
+
+// unregisterClient handles client unregistration (internal)
+func (h *Hub) unregisterClient(client *domain.Client) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	if _, ok := h.clients[client.ConversationID]; ok {
+		delete(h.clients[client.ConversationID], client)
+		if len(h.clients[client.ConversationID]) == 0 {
+			delete(h.clients, client.ConversationID)
+		}
+
+		// Bağlantıyı kapat
+		client.Conn.Close()
+	}
+}
+
+// LoadConversationMembers sohbetin katılımcılarını yükler
+func (h *Hub) LoadConversationMembers(ctx context.Context, conversationID uuid.UUID, repo usecase.Repository) error {
+	// Sohbet katılımcılarını veritabanından çek
+	participants, err := repo.GetParticipants(ctx, conversationID)
+	if err != nil {
+		return err
+	}
+
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	if _, ok := h.conversationUsers[conversationID]; !ok {
+		h.conversationUsers[conversationID] = make(map[string]bool)
+	}
+
+	// Tüm katılımcıları kaydet
+	for _, participant := range participants {
+		h.conversationUsers[conversationID][participant.String()] = true
+	}
+
+	return nil
+}
+
+// IsConversationLoaded sohbetin yüklenip yüklenmediğini kontrol eder
+func (h *Hub) IsConversationLoaded(conversationID uuid.UUID) bool {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+
+	_, exists := h.conversationUsers[conversationID]
+	return exists
+}
+
+// BroadcastToConversation belirli bir sohbetteki tüm istemcilere mesaj gönderir
+func (h *Hub) BroadcastToConversation(conversationID uuid.UUID, message interface{}) {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+
+	// Sohbetteki tüm istemcilere gönder
+	if clients, ok := h.clients[conversationID]; ok {
+		for client := range clients {
+			client.WriteLock.Lock()
+			err := client.Conn.WriteJSON(message)
+			client.WriteLock.Unlock()
+
+			if err != nil {
+				log.Println("WebSocket write error:", err)
+				// Bağlantı kapanırsa değişiklikler için sinyalizasyon.
+				// Bunu daha sonra unregister kanalına da gönderebiliriz
+				client.Conn.Close()
+				delete(clients, client)
+			}
+		}
+	}
+}
+
+// GetConversationUsers, bir sohbetteki kullanıcı kimliklerini döndürür
+func (h *Hub) GetConversationUsers(conversationID uuid.UUID) map[string]bool {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+
+	if users, ok := h.conversationUsers[conversationID]; ok {
+		// Kopya oluştur, doğrudan referans değil
+		result := make(map[string]bool, len(users))
+		for userID, val := range users {
+			result[userID] = val
+		}
+		return result
+	}
+
+	return make(map[string]bool)
+}

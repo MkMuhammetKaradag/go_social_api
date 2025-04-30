@@ -34,8 +34,8 @@ func (uc *createMessageUseCase) Execute(ctx context.Context, conversationID, sen
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to create message: %w", err)
 	}
-	channelName := fmt.Sprintf("conversation:%s", message.ConversationID)
-	err = uc.chatRedisRepo.PublishChatMessage(ctx, channelName, message)
+	// channelName := fmt.Sprintf("conversation:%s", message.ConversationID)
+	err = uc.chatRedisRepo.PublishChatMessage(ctx, "messages", message)
 	if err != nil {
 		fmt.Printf("Error publishing message to Redis: %v\n", err)
 	}

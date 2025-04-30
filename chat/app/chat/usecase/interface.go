@@ -21,12 +21,10 @@ type ChatWebSocketListenUseCase interface {
 }
 
 type Hub interface {
-	Run()
-	ListenRedisSendMessage(ctx context.Context, channelName string)
 	RegisterClient(client *domain.Client, userID uuid.UUID)
 	UnregisterClient(client *domain.Client, userID uuid.UUID)
 	LoadConversationMembers(ctx context.Context, conversationID uuid.UUID, repo Repository) error
-	SendInitialUserStatuses(client *domain.Client, conversationID uuid.UUID)
+	IsConversationLoaded(conversationID uuid.UUID) bool
 }
 
 type RabbitMQ interface {

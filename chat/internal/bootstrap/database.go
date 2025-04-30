@@ -38,12 +38,19 @@ type ChatRedisRepository interface {
 	GetRedisClient() *redis.Client
 }
 type Hub interface {
-	Run()
-	ListenRedisSendMessage(ctx context.Context, channelName string)
+	// Run()
+	// ListenRedisSendMessage(ctx context.Context, channelName string)
+	// RegisterClient(client *domain.Client, userID uuid.UUID)
+	// UnregisterClient(client *domain.Client, userID uuid.UUID)
+	// LoadConversationMembers(ctx context.Context, conversationID uuid.UUID, repo usecase.Repository) error
+	// SendInitialUserStatuses(client *domain.Client, conversationID uuid.UUID)
+	// IsConversationLoaded(conversationID uuid.UUID) bool
+	// GetConversationUsers(conversationID uuid.UUID) map[string]bool
+
 	RegisterClient(client *domain.Client, userID uuid.UUID)
 	UnregisterClient(client *domain.Client, userID uuid.UUID)
 	LoadConversationMembers(ctx context.Context, conversationID uuid.UUID, repo usecase.Repository) error
-	SendInitialUserStatuses(client *domain.Client, conversationID uuid.UUID)
+	IsConversationLoaded(conversationID uuid.UUID) bool
 }
 
 func InitDatabase(config config.Config) Repository {
@@ -56,6 +63,6 @@ func InitRedis(config config.Config) RedisRepository {
 func InitChatRedis(config config.Config) ChatRedisRepository {
 	return initializer.InitChatRedis(config)
 }
-func InitWebsocket(redisClient *redis.Client) Hub {
-	return initializer.InitWebsocket(redisClient)
+func InitWebsocket(ctx context.Context, redisClient *redis.Client) Hub {
+	return initializer.InitWebsocket(ctx, redisClient)
 }

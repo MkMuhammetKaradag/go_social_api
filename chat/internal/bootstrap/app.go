@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"context"
 	"socialmedia/chat/pkg/config"
 	"socialmedia/chat/pkg/graceful"
 	"socialmedia/shared/messaging"
@@ -40,7 +41,8 @@ func (a *App) initDependencies() {
 	a.redisRepo = InitRedis(a.config)
 	a.chatRedisRepo = InitChatRedis(a.config)
 	redisClient := a.chatRedisRepo.GetRedisClient()
-	a.myWS = InitWebsocket(redisClient)
+	ctx := context.Background()
+	a.myWS = InitWebsocket(ctx, redisClient)
 
 	// fmt.Printf("initDependencies: repo address: %p\n", a.repo)
 
@@ -52,7 +54,7 @@ func (a *App) initDependencies() {
 
 	// HTTP handler'larını hazırla
 	a.httpHandlers = SetupHTTPHandlers(a.repo, a.redisRepo, a.chatRedisRepo, a.rabbitMQ)
-	a.wsHandlers = SetupWSHandlers(a.repo, a.chatRedisRepo,a.myWS)
+	a.wsHandlers = SetupWSHandlers(a.repo, a.chatRedisRepo, a.myWS)
 
 	// HTTP sunucusu kurulumu
 	a.fiberApp = SetupServer(a.config, a.httpHandlers, a.wsHandlers, a.redisRepo)

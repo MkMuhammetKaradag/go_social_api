@@ -1,14 +1,15 @@
 package initializer
 
 import (
-	"socialmedia/chat/infra/websocket"
+	"context"
+	"socialmedia/chat/app/chat/ws"
 
 	"github.com/redis/go-redis/v9"
 )
 
-func InitWebsocket(redisClient *redis.Client) *websocket.Hub {
+func InitWebsocket(ctx context.Context, redisClient *redis.Client) *ws.Hub {
 
-	hub := websocket.NewHub(redisClient)
-	go hub.Run()
+	hub := ws.NewHub(redisClient)
+	go hub.Run(ctx)
 	return hub
 }

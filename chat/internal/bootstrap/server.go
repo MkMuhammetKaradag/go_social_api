@@ -41,7 +41,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 		protected.Post("/createmessage", handler.HandleWithFiber[chat.CreateMessageRequest, chat.CreateMessageResponse](createMessageHandler))
 
 		wsRoute := app.Group("/ws")
-		wsRoute.Get("/:chatID", handler.HandleWithFiberWS[chat.ChatWebSocketListenRequest](chatListenHandler))
+		wsRoute.Get("/message/:chatID", handler.HandleWithFiberWS[chat.ChatWebSocketListenRequest](chatListenHandler))
 
 	}
 
