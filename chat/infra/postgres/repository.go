@@ -105,7 +105,9 @@ func (r *Repository) UpdateUser(ctx context.Context, userID uuid.UUID, userName,
 	return nil
 }
 
-func (r *Repository) CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, error) {
+func (r *Repository) CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, *[]domain.BlockedParticipant, error) {
+	// Bloklanmış kullanıcıları tutacak slice
+	var blockedParticipants []domain.BlockedParticipant
 	query := `
 		INSERT INTO conversations (is_group, name)
 		VALUES ($1, $2)
@@ -119,23 +121,78 @@ func (r *Repository) CreateConversation(ctx context.Context, currrentUserID uuid
 	err := r.db.QueryRowContext(ctx, query, isGroup, name).
 		Scan(&convo.ID, &convo.CreatedAt)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create conversation: %w", err)
+		return nil, nil, fmt.Errorf("failed to create conversation: %w", err)
+	}
+
+	// Tüm kullanıcılar arasındaki blok ilişkilerini kontrol et
+	for i, uid1 := range userIDs {
+		if uid1 == currrentUserID {
+			continue
+		}
+		for j, uid2 := range userIDs {
+			if i != j {
+				blocked, err := r.IsBlocked(ctx, uid1, uid2)
+				if err != nil {
+					return nil, nil, err
+				}
+				if blocked {
+					blockedParticipants = append(blockedParticipants, domain.BlockedParticipant{
+						BlockerID: uid1,
+						BlockedID: uid2,
+					})
+				}
+			}
+		}
 	}
 
 	// Katılımcıları ekle
 	for _, uid := range userIDs {
 		err := r.AddParticipant(ctx, convo.ID, uid, currrentUserID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to add participant: %w", err)
+			return nil, nil, fmt.Errorf("failed to add participant: %w", err)
 		}
 	}
 
-	return &convo, nil
+	return &convo, &blockedParticipants, nil
+}
+
+func (r *Repository) GetBlockedParticipantsForUser(ctx context.Context, conversationID, userID uuid.UUID) ([]uuid.UUID, error) {
+	query := `
+        SELECT b.blocked_id
+        FROM blocks_cache b
+        INNER JOIN conversation_participants cp1 ON b.blocker_id = $1
+        INNER JOIN conversation_participants cp2 ON b.blocked_id = cp2.user_id
+        WHERE cp1.conversation_id = $2 AND cp2.conversation_id = $2
+    `
+
+	var blockedUsers []uuid.UUID
+	rows, err := r.db.QueryContext(ctx, query, userID, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var blockedID uuid.UUID
+		if err := rows.Scan(&blockedID); err != nil {
+			return nil, err
+		}
+		blockedUsers = append(blockedUsers, blockedID)
+	}
+
+	return blockedUsers, nil
 }
 func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID uuid.UUID, currentUserID uuid.UUID) error {
 	isPrivate, err := r.IsUserPrivate(ctx, userID)
 	if err != nil {
 		return err
+	}
+	blocked, err := r.HasBlockRelationship(ctx, currentUserID, userID)
+	if err != nil {
+		return err
+	}
+	if blocked {
+		return nil
 	}
 
 	if isPrivate {
@@ -144,7 +201,7 @@ func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID 
 			return err
 		}
 		if !areFriends {
-			return fmt.Errorf("user %s is private and not friends with %s", userID, currentUserID)
+			return nil //fmt.Errorf("user %s is private and not friends with %s", userID, currentUserID)
 		}
 	}
 

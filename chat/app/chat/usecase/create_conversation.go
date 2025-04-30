@@ -27,28 +27,37 @@ func (u *createConversationUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 		return domain.ErrNotFoundAuthorization
 	}
 
-	currrentUserID, err := uuid.Parse(userData["id"])
+	currentUserID, err := uuid.Parse(userData["id"])
 	if err != nil {
 		return err
 	}
-	fmt.Println("hello")
 
-	userIDMap := make(map[uuid.UUID]struct{})
+	// UUID'leri benzersiz hale getir
+	uniqueUserIDMap := make(map[uuid.UUID]struct{})
 	for _, id := range userIDs {
-		userIDMap[id] = struct{}{}
+		uniqueUserIDMap[id] = struct{}{}
 	}
-	if _, exists := userIDMap[currrentUserID]; !exists {
-		userIDs = append(userIDs, currrentUserID)
+	uniqueUserIDMap[currentUserID] = struct{}{} // current user'ı da ekle
+
+	// Benzersiz ID listesini oluştur
+	uniqueUserIDs := make([]uuid.UUID, 0, len(uniqueUserIDMap))
+	for id := range uniqueUserIDMap {
+		isblock, _ := u.repository.IsBlocked(ctx, currentUserID, id)
+		if isblock {
+			continue
+		}
+		uniqueUserIDs = append(uniqueUserIDs, id)
 	}
-	fmt.Println("exists")
-	if len(userIDs) <= 2 {
-		isGroup = false
-	}
-	_, err = u.repository.CreateConversation(ctx, currrentUserID, isGroup, name, userIDs)
+
+	// 2 veya daha az katılımcı varsa grup değildir
+	isGroup = len(uniqueUserIDs) > 2
+
+	_, blockParticpant, err := u.repository.CreateConversation(ctx, currentUserID, isGroup, name, uniqueUserIDs)
 	if err != nil {
 		return err
 
 	}
+	fmt.Println("block partispant:", blockParticpant)
 
 	return nil
 }
