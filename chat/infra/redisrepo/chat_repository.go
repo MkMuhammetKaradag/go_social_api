@@ -45,8 +45,7 @@ func NewChatRedisRepository(connString, password string, db int) (*ChatRedisRepo
 }
 
 func (r *ChatRedisRepository) PublishChatMessage(ctx context.Context, channelName string, message *domain.Message) error {
-	fmt.Println("geldi")
-
+	
 	attachments := []AttachmentInfo{}
 	for _, attachment := range message.Attachments {
 		attachments = append(attachments, AttachmentInfo{

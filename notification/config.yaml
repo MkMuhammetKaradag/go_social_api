@@ -1,0 +1,23 @@
+app:
+  name: 'Benim Uygulamam'
+  version: '1.0.0'
+
+server:
+  port: 8085
+  host: 'localhost'
+
+database:
+  port: 5432
+  user: 'myuser'
+  password: 'mypassword'
+  db: 'notificationdb'
+  host: 'localhost'
+
+redis:
+  redisURL: 'localhost:6379'
+  password: ''
+  db: 0
+  userDB: 1
+
+jwt:
+  secret: 'secret'

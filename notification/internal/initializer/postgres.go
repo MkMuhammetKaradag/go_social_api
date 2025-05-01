@@ -3,8 +3,8 @@ package initializer
 import (
 	"fmt"
 	"log"
-	"socialmedia/user/infra/postgres"
-	"socialmedia/user/pkg/config"
+	"socialmedia/notification/infra/postgres"
+	"socialmedia/notification/pkg/config"
 )
 
 func InitDatabase(appConfig config.Config) *postgres.Repository {

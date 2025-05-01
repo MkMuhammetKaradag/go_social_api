@@ -52,12 +52,15 @@ func (u *createConversationUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 	// 2 veya daha az katılımcı varsa grup değildir
 	isGroup = len(uniqueUserIDs) > 2
 
-	conversation, blockParticpant, err := u.repository.CreateConversation(ctx, currentUserID, isGroup, name, uniqueUserIDs)
+	conversation, blockedParticipant, err := u.repository.CreateConversation(ctx, currentUserID, isGroup, name, uniqueUserIDs)
 	if err != nil {
 		return err
 
 	}
-	fmt.Println("conversation ID:", conversation.ID, "block partispant:", blockParticpant)
+	if blockedParticipant != nil && len(*blockedParticipant) > 0 {
+		fmt.Println("conversation ID:", conversation.ID, "block partispant:", blockedParticipant)
+		fmt.Println("bildirim yollandı")
+	}
 
 	return nil
 }
