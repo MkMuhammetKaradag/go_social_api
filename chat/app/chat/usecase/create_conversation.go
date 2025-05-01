@@ -42,7 +42,7 @@ func (u *createConversationUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 	// Benzersiz ID listesini oluştur
 	uniqueUserIDs := make([]uuid.UUID, 0, len(uniqueUserIDMap))
 	for id := range uniqueUserIDMap {
-		isblock, _ := u.repository.IsBlocked(ctx, currentUserID, id)
+		isblock, _ := u.repository.HasBlockRelationship(ctx, currentUserID, id)
 		if isblock {
 			continue
 		}
@@ -52,12 +52,12 @@ func (u *createConversationUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 	// 2 veya daha az katılımcı varsa grup değildir
 	isGroup = len(uniqueUserIDs) > 2
 
-	_, blockParticpant, err := u.repository.CreateConversation(ctx, currentUserID, isGroup, name, uniqueUserIDs)
+	conversation, blockParticpant, err := u.repository.CreateConversation(ctx, currentUserID, isGroup, name, uniqueUserIDs)
 	if err != nil {
 		return err
 
 	}
-	fmt.Println("block partispant:", blockParticpant)
+	fmt.Println("conversation ID:", conversation.ID, "block partispant:", blockParticpant)
 
 	return nil
 }

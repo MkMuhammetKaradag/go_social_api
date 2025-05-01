@@ -59,6 +59,7 @@ func (u *chatWebSocketListenUseCase) Execute(c *websocketFiber.Conn, ctx context
 	conn := c.Conn
 	client := &domain.Client{
 		ConversationID: conversationID,
+		UserID:         userID,
 		Conn:           conn,
 	}
 

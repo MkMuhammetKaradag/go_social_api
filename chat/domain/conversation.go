@@ -23,7 +23,7 @@ type Attachment struct {
 type Message struct {
 	ID             uuid.UUID
 	ConversationID uuid.UUID
-	SenderID       uuid.UUID
+	UserID         uuid.UUID
 	Content        string
 	CreatedAt      time.Time
 	IsEdited       bool

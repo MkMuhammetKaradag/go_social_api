@@ -34,16 +34,21 @@ type Hub struct {
 
 	// Eşzamanlılık koruması
 	mutex sync.RWMutex
+
+	//repository
+
+	repo Repository
 }
 
 // NewHub creates a new Hub instance
-func NewHub(redisClient *redis.Client) *Hub {
+func NewHub(redisClient *redis.Client, repo Repository) *Hub {
 	hub := &Hub{
 		clients:           make(map[uuid.UUID]map[*domain.Client]bool),
 		conversationUsers: make(map[uuid.UUID]map[string]bool),
 		register:          make(chan *domain.Client),
 		unregister:        make(chan *domain.Client),
 		redisClient:       redisClient,
+		repo:              repo,
 	}
 
 	// Alt bileşenleri oluştur
@@ -128,7 +133,7 @@ func (h *Hub) unregisterClient(client *domain.Client) {
 // LoadConversationMembers sohbetin katılımcılarını yükler
 func (h *Hub) LoadConversationMembers(ctx context.Context, conversationID uuid.UUID, repo usecase.Repository) error {
 	// Sohbet katılımcılarını veritabanından çek
-	participants, err := repo.GetParticipants(ctx, conversationID)
+	participants, err := h.repo.GetParticipants(ctx, conversationID)
 	if err != nil {
 		return err
 	}
@@ -158,23 +163,46 @@ func (h *Hub) IsConversationLoaded(conversationID uuid.UUID) bool {
 }
 
 // BroadcastToConversation belirli bir sohbetteki tüm istemcilere mesaj gönderir
-func (h *Hub) BroadcastToConversation(conversationID uuid.UUID, message interface{}) {
+func (h *Hub) BroadcastToConversation(ctx context.Context, conversationID uuid.UUID, message interface{}) {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 
 	// Sohbetteki tüm istemcilere gönder
 	if clients, ok := h.clients[conversationID]; ok {
 		for client := range clients {
-			client.WriteLock.Lock()
-			err := client.Conn.WriteJSON(message)
-			client.WriteLock.Unlock()
+			switch msg := message.(type) {
 
-			if err != nil {
-				log.Println("WebSocket write error:", err)
-				// Bağlantı kapanırsa değişiklikler için sinyalizasyon.
-				// Bunu daha sonra unregister kanalına da gönderebiliriz
-				client.Conn.Close()
-				delete(clients, client)
+			case MessageNotification:
+				// Engelleme kontrolü (client mesajı göndereni engellemiş mi?)
+				if h.IsBlocked(ctx, client.UserID, msg.UserID) {
+					continue
+				}
+				// Gönder
+				client.WriteLock.Lock()
+				err := client.Conn.WriteJSON(msg)
+				client.WriteLock.Unlock()
+
+				if err != nil {
+					log.Println("WebSocket write error:", err)
+					client.Conn.Close()
+					delete(clients, client)
+				}
+
+			case UserStatusNotification:
+				// Bu türde engelleme kontrolü yapmana gerek yoksa direkt gönder
+				client.WriteLock.Lock()
+				err := client.Conn.WriteJSON(msg)
+				client.WriteLock.Unlock()
+
+				if err != nil {
+					log.Println("WebSocket write error:", err)
+					client.Conn.Close()
+					delete(clients, client)
+				}
+
+			default:
+				log.Println("Unknown message type")
+				continue
 			}
 		}
 	}
@@ -195,4 +223,13 @@ func (h *Hub) GetConversationUsers(conversationID uuid.UUID) map[string]bool {
 	}
 
 	return make(map[string]bool)
+}
+
+func (h *Hub) IsBlocked(ctx context.Context, blockerID, blockedID uuid.UUID) bool {
+	exists, err := h.repo.IsBlocked(ctx, blockerID, blockedID)
+	if err != nil {
+		log.Println("repo block check error:", err)
+		return false
+	}
+	return exists
 }

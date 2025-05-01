@@ -126,9 +126,9 @@ func (r *Repository) CreateConversation(ctx context.Context, currrentUserID uuid
 
 	// Tüm kullanıcılar arasındaki blok ilişkilerini kontrol et
 	for i, uid1 := range userIDs {
-		if uid1 == currrentUserID {
-			continue
-		}
+		// if uid1 == currrentUserID {
+		// 	continue
+		// }
 		for j, uid2 := range userIDs {
 			if i != j {
 				blocked, err := r.IsBlocked(ctx, uid1, uid2)
@@ -187,13 +187,13 @@ func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID 
 	if err != nil {
 		return err
 	}
-	blocked, err := r.HasBlockRelationship(ctx, currentUserID, userID)
-	if err != nil {
-		return err
-	}
-	if blocked {
-		return nil
-	}
+	// blocked, err := r.HasBlockRelationship(ctx, currentUserID, userID)
+	// if err != nil {
+	// 	return err
+	// }
+	// if blocked {
+	// 	return nil
+	// }
 
 	if isPrivate {
 		areFriends, err := r.AreUsersFriends(ctx, currentUserID, userID)
@@ -244,7 +244,7 @@ func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID
 
 	var msg domain.Message
 	msg.ConversationID = conversationID
-	msg.SenderID = senderID
+	msg.UserID = senderID
 	msg.Content = content
 
 	err = tx.QueryRowContext(ctx, query, conversationID, senderID, content).

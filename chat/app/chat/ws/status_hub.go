@@ -87,13 +87,13 @@ func (sh *StatusHub) listenForStatusUpdates(ctx context.Context) {
 			sh.userStatuses.Store(statusNotif.UserID, statusNotif)
 
 			// İlgili sohbetlere durumu bildir
-			sh.broadcastStatusToRelevantConversations(statusNotif)
+			sh.broadcastStatusToRelevantConversations(ctx, statusNotif)
 		}
 	}
 }
 
 // broadcastStatusToRelevantConversations, durum güncellemesini ilgili sohbetlere yayınlar
-func (sh *StatusHub) broadcastStatusToRelevantConversations(statusNotif UserStatusNotification) {
+func (sh *StatusHub) broadcastStatusToRelevantConversations(ctx context.Context, statusNotif UserStatusNotification) {
 	// Kullanıcının bulunduğu tüm sohbetleri bul
 	// parentHub üzerinden tüm sohbetleri tara ve kullanıcının olduğu sohbetleri bul
 	for conversationID, users := range sh.getConversationsWithUser(statusNotif.UserID) {
@@ -103,10 +103,9 @@ func (sh *StatusHub) broadcastStatusToRelevantConversations(statusNotif UserStat
 				log.Println("Invalid conversation ID:", err)
 				continue
 			}
-			
 
 			// Sohbetteki tüm istemcilere yayınla
-			sh.parentHub.BroadcastToConversation(convID, statusNotif)
+			sh.parentHub.BroadcastToConversation(ctx, convID, statusNotif)
 		}
 	}
 }

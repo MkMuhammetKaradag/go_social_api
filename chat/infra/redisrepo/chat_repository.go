@@ -17,7 +17,7 @@ type ChatRedisRepository struct {
 type MessageNotification struct {
 	MessageID      uuid.UUID        `json:"message_id"`
 	ConversationID uuid.UUID        `json:"conversation_id"`
-	SenderID       uuid.UUID        `json:"sender_id"`
+	UserID         uuid.UUID        `json:"user_id"`
 	Content        string           `json:"content"`
 	CreatedAt      string           `json:"created_at"`
 	HasAttachments bool             `json:"has_attachments"`
@@ -60,7 +60,7 @@ func (r *ChatRedisRepository) PublishChatMessage(ctx context.Context, channelNam
 	notification := MessageNotification{
 		MessageID:      message.ID,
 		ConversationID: message.ConversationID,
-		SenderID:       message.SenderID,
+		UserID:         message.UserID,
 		Content:        message.Content,
 		CreatedAt:      message.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		HasAttachments: len(message.Attachments) > 0,

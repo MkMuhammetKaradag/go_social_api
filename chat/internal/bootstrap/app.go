@@ -42,7 +42,7 @@ func (a *App) initDependencies() {
 	a.chatRedisRepo = InitChatRedis(a.config)
 	redisClient := a.chatRedisRepo.GetRedisClient()
 	ctx := context.Background()
-	a.myWS = InitWebsocket(ctx, redisClient)
+	a.myWS = InitWebsocket(ctx, redisClient, a.repo)
 
 	// fmt.Printf("initDependencies: repo address: %p\n", a.repo)
 

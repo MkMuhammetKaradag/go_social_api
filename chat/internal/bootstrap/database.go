@@ -64,6 +64,6 @@ func InitRedis(config config.Config) RedisRepository {
 func InitChatRedis(config config.Config) ChatRedisRepository {
 	return initializer.InitChatRedis(config)
 }
-func InitWebsocket(ctx context.Context, redisClient *redis.Client) Hub {
-	return initializer.InitWebsocket(ctx, redisClient)
+func InitWebsocket(ctx context.Context, redisClient *redis.Client, repo Repository) Hub {
+	return initializer.InitWebsocket(ctx, redisClient, repo)
 }

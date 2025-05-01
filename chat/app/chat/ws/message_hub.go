@@ -13,7 +13,7 @@ import (
 type MessageNotification struct {
 	MessageID      uuid.UUID        `json:"message_id"`
 	ConversationID uuid.UUID        `json:"conversation_id"`
-	SenderID       uuid.UUID        `json:"sender_id"`
+	UserID         uuid.UUID        `json:"user_id"`
 	Content        string           `json:"content"`
 	CreatedAt      string           `json:"created_at"`
 	HasAttachments bool             `json:"has_attachments"`
@@ -59,7 +59,7 @@ func (mh *MessageHub) listenForMessages(ctx context.Context, channelName string)
 		case <-ctx.Done():
 			// Bağlam iptal edildiğinde çık
 			return
-			
+
 		default:
 			// Redis'ten mesaj al
 			msg, err := pubsub.ReceiveMessage(ctx)
@@ -75,12 +75,12 @@ func (mh *MessageHub) listenForMessages(ctx context.Context, channelName string)
 				log.Println("Message unmarshal error:", err)
 				continue
 			}
-			
+
 			// Mesaj tipini belirt
 			notification.Type = "message"
-			
+
 			// İlgili sohbetteki tüm istemcilere gönder
-			mh.parentHub.BroadcastToConversation(notification.ConversationID, notification)
+			mh.parentHub.BroadcastToConversation(ctx, notification.ConversationID, notification)
 		}
 	}
 }
@@ -89,12 +89,12 @@ func (mh *MessageHub) listenForMessages(ctx context.Context, channelName string)
 func (mh *MessageHub) SendMessage(ctx context.Context, notification MessageNotification) error {
 	// Mesaj tipini belirt
 	notification.Type = "message"
-	
+
 	// Mesajı Redis'e yayınla
 	data, err := json.Marshal(notification)
 	if err != nil {
 		return err
 	}
-	
+
 	return mh.redisClient.Publish(ctx, "messages", string(data)).Err()
 }
