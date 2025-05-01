@@ -24,8 +24,9 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Port string `mapstructure:"port"`
-	Host string `mapstructure:"host"`
+	MongoPort string `mapstructure:"mongoPort"`
+	Port      string `mapstructure:"port"`
+	Host      string `mapstructure:"host"`
 
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`

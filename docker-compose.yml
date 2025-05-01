@@ -12,8 +12,18 @@ services:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init:/docker-entrypoint-initdb.d # çok önemli
-
+      - ./init:/docker-entrypoint-initdb.d
+  mongodb:
+    image: mongo:latest
+    container_name: my-mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: myuser
+      MONGO_INITDB_ROOT_PASSWORD: mypassword
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
   redis:
     image: redis:alpine
     ports:
@@ -30,3 +40,4 @@ services:
 volumes:
   postgres_data:
     driver: local
+  mongo_data:

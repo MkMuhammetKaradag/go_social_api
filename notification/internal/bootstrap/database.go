@@ -11,13 +11,18 @@ import (
 type Repository interface {
 	CreateUser(ctx context.Context, userID uuid.UUID, username string) error
 }
-
+type RepositoryMongo interface {
+	CreateUser(ctx context.Context, userID uuid.UUID, username string) error
+}
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)
 }
 
 func InitDatabase(config config.Config) Repository {
 	return initializer.InitDatabase(config)
+}
+func InitDatabaseMongo(config config.Config) Repository {
+	return initializer.InitDatabaseMongo(config)
 }
 
 func InitRedis(config config.Config) RedisRepository {

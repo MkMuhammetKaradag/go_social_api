@@ -6,8 +6,8 @@ import (
 	"socialmedia/shared/messaging"
 )
 
-func SetupMessageHandlers(repo Repository, redisRepo RedisRepository) map[messaging.MessageType]MessageHandler {
-	createUserUseCase := userUseCase.NewCreateUserUseCase(repo)
+func SetupMessageHandlers(repo Repository, repoMongo RepositoryMongo, redisRepo RedisRepository) map[messaging.MessageType]MessageHandler {
+	createUserUseCase := userUseCase.NewCreateUserUseCase(repo, repoMongo)
 	createUserHandler := user.NewCreatedUserHandler(createUserUseCase)
 
 	return map[messaging.MessageType]MessageHandler{messaging.UserTypes.UserCreated: createUserHandler}

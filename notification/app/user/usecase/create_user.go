@@ -7,18 +7,25 @@ import (
 )
 
 type createUserUseCase struct {
-	repository Repository
+	repository      Repository
+	repositoryMongo RepositoryMongo
 }
 
-func NewCreateUserUseCase(repository Repository) CreateUserUseCase {
+func NewCreateUserUseCase(repository Repository, repositoryMongo RepositoryMongo) CreateUserUseCase {
 	return &createUserUseCase{
-		repository: repository,
+		repository:      repository,
+		repositoryMongo: repositoryMongo,
 	}
 }
 
 func (u *createUserUseCase) Execute(ctx context.Context, userID uuid.UUID, userName string) error {
 
 	err := u.repository.CreateUser(ctx, userID, userName)
+	if err != nil {
+		return err
+
+	}
+	err = u.repositoryMongo.CreateUser(ctx, userID, userName)
 	if err != nil {
 		return err
 

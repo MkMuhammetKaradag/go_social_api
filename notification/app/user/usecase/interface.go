@@ -17,7 +17,9 @@ type RabbitMQ interface {
 type Repository interface {
 	CreateUser(ctx context.Context, userID uuid.UUID, username string) error
 }
-
+type RepositoryMongo interface {
+	CreateUser(ctx context.Context, userID uuid.UUID, username string) error
+}
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)
 }

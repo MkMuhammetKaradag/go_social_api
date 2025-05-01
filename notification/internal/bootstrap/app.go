@@ -13,6 +13,7 @@ import (
 type App struct {
 	config          config.Config
 	repo            Repository
+	repoMongo       RepositoryMongo
 	redisRepo       RedisRepository
 	rabbitMQ        Messaging
 	fiberApp        *fiber.App
@@ -34,13 +35,13 @@ func NewApp(config config.Config) *App {
 func (a *App) initDependencies() {
 	// Database ve Redis başlat
 	a.repo = InitDatabase(a.config)
+	a.repoMongo = InitDatabaseMongo(a.config)
 	a.redisRepo = InitRedis(a.config)
-
 
 	// fmt.Printf("initDependencies: repo address: %p\n", a.repo)
 
 	// Message handler'larını hazırla
-	a.messageHandlers = SetupMessageHandlers(a.repo, a.redisRepo)
+	a.messageHandlers = SetupMessageHandlers(a.repo,a.repoMongo, a.redisRepo)
 
 	// Messaging yapılandırması
 	a.rabbitMQ = SetupMessaging(a.messageHandlers, a.config)
