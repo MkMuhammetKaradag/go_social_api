@@ -4,11 +4,12 @@ type ServiceType string
 type MessageType string
 
 const (
-	AuthService   ServiceType = "auth"
-	UserService   ServiceType = "user"
-	FollowService ServiceType = "follow"
-	EmailService  ServiceType = "email"
-	ChatService   ServiceType = "chat"
+	AuthService         ServiceType = "auth"
+	UserService         ServiceType = "user"
+	FollowService       ServiceType = "follow"
+	EmailService        ServiceType = "email"
+	ChatService         ServiceType = "chat"
+	NotificationService ServiceType = "notification"
 )
 
 var EmailTypes = struct {

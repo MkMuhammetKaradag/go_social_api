@@ -9,6 +9,7 @@ import (
 )
 
 type Repository interface {
+	CreateUser(ctx context.Context, userID uuid.UUID, username string) error
 }
 
 type RedisRepository interface {
@@ -22,7 +23,6 @@ func InitDatabase(config config.Config) Repository {
 func InitRedis(config config.Config) RedisRepository {
 	return initializer.InitRedis(config)
 }
-
 
 type UserRedisRepository interface {
 	PublishUserStatus(ctx context.Context, userID uuid.UUID, status string)

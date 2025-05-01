@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 )
 
@@ -39,16 +40,16 @@ func NewRepository(connString string) (*Repository, error) {
 	return repo, nil
 }
 
-func (r *Repository) CreateUser(ctx context.Context, id, username, email string) error {
+func (r *Repository) CreateUser(ctx context.Context, id uuid.UUID, username string) error {
 
 	query := `
-		INSERT INTO users (id, username, email)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (id) DO UPDATE
+		INSERT INTO users_cache (id, username)
+		VALUES ($1, $2)
+		 ON CONFLICT (id) DO UPDATE
         SET username = EXCLUDED.username,
-            email = EXCLUDED.email
+            updated_at = NOW()
 	`
-	_, err := r.db.ExecContext(ctx, query, id, username, email)
+	_, err := r.db.ExecContext(ctx, query, id, username)
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}

@@ -63,7 +63,7 @@ func (u *activateUseCase) Execute(ctx context.Context, activationToken, activati
 
 	userCreatedMessage := messaging.Message{
 		Type:       messaging.UserTypes.UserCreated,
-		ToServices: []messaging.ServiceType{messaging.UserService, messaging.ChatService, messaging.FollowService},
+		ToServices: []messaging.ServiceType{messaging.UserService, messaging.ChatService, messaging.FollowService, messaging.NotificationService},
 		Data: map[string]interface{}{
 			"id":       response.ID,
 			"email":    response.Email,
