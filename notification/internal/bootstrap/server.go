@@ -1,6 +1,8 @@
 package bootstrap
 
 import (
+	notification "socialmedia/notification/app/notification/handler"
+	"socialmedia/notification/internal/handler"
 	"socialmedia/notification/internal/server"
 	"socialmedia/notification/pkg/config"
 	"socialmedia/shared/middlewares"
@@ -28,6 +30,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 		return c.SendString("Hello, World!")
 	})
 
+	getNotificationsHandler := httpHandlers["getnotifications"].(*notification.GetNotificationsHandler)
 	// Korumalı rotalar
 	authMiddleware := middlewares.NewAuthMiddleware(redisRepo)
 	protected := app.Group("/", authMiddleware.Authenticate())
@@ -36,6 +39,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 		protected.Get("/", func(c *fiber.Ctx) error {
 			return c.SendString("Hello, World-2!")
 		})
+		protected.Get("/notifications", handler.HandleWithFiber[notification.GetNotificationsRequest, notification.GetNotificationsResponse](getNotificationsHandler))
 
 	}
 

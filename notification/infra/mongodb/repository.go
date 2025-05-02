@@ -131,3 +131,43 @@ func (r *Repository) CreateNotification(ctx context.Context, notification domain
 
 	return nil
 }
+
+// GetNotificationsByUserID - Belirli bir kullanıcının bildirimlerini getirir
+func (r *Repository) GetNotificationsByUserID(ctx context.Context, userID string, limit, skip int64) ([]domain.Notification, error) {
+	// UUID doğrulama
+	if _, err := uuid.Parse(userID); err != nil {
+		return nil, fmt.Errorf("invalid userID format, must be UUID: %w", err)
+	}
+
+	collection := r.GetCollection("notifications")
+
+	// Sorgu oluştur
+	filter := bson.M{"userId": userID}
+
+	// Sayfalama ve sıralama seçenekleri
+	findOptions := options.Find()
+	findOptions.SetSort(bson.M{"createdAt": -1}) // En yeni bildirimler önce
+
+	if limit > 0 {
+		findOptions.SetLimit(limit)
+	}
+
+	if skip > 0 {
+		findOptions.SetSkip(skip)
+	}
+
+	// Sorguyu çalıştır
+	cursor, err := collection.Find(ctx, filter, findOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find notifications: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	// Sonuçları bir slice'a dönüştür
+	var notifications []domain.Notification
+	if err := cursor.All(ctx, &notifications); err != nil {
+		return nil, fmt.Errorf("failed to decode notifications: %w", err)
+	}
+
+	return notifications, nil
+}

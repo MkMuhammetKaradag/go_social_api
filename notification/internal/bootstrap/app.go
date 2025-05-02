@@ -41,13 +41,13 @@ func (a *App) initDependencies() {
 	// fmt.Printf("initDependencies: repo address: %p\n", a.repo)
 
 	// Message handler'larını hazırla
-	a.messageHandlers = SetupMessageHandlers(a.repo,a.repoMongo, a.redisRepo)
+	a.messageHandlers = SetupMessageHandlers(a.repo, a.repoMongo, a.redisRepo)
 
 	// Messaging yapılandırması
 	a.rabbitMQ = SetupMessaging(a.messageHandlers, a.config)
 
 	// HTTP handler'larını hazırla
-	a.httpHandlers = SetupHTTPHandlers(a.repo, a.redisRepo, a.rabbitMQ)
+	a.httpHandlers = SetupHTTPHandlers(a.repo, a.repoMongo, a.redisRepo, a.rabbitMQ)
 
 	// HTTP sunucusu kurulumu
 	a.fiberApp = SetupServer(a.config, a.httpHandlers, a.repo, a.redisRepo, a.rabbitMQ)

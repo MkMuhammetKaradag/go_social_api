@@ -15,6 +15,7 @@ type Repository interface {
 type RepositoryMongo interface {
 	CreateUser(ctx context.Context, userID uuid.UUID, username string) error
 	CreateNotification(ctx context.Context, notification domain.Notification) error
+	GetNotificationsByUserID(ctx context.Context, userID string, limit, skip int64) ([]domain.Notification, error)
 }
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)

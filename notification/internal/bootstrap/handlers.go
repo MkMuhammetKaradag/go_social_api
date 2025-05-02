@@ -3,6 +3,8 @@ package bootstrap
 import (
 	chat "socialmedia/notification/app/chat/handler"
 	chatUseCase "socialmedia/notification/app/chat/usecase"
+	notification "socialmedia/notification/app/notification/handler"
+	notificationUseCase "socialmedia/notification/app/notification/usecase"
 	user "socialmedia/notification/app/user/handler"
 	userUseCase "socialmedia/notification/app/user/usecase"
 	"socialmedia/shared/messaging"
@@ -21,9 +23,13 @@ func SetupMessageHandlers(repo Repository, repoMongo RepositoryMongo, redisRepo 
 	}
 }
 
-func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, rabbitMQ Messaging) map[string]interface{} {
+func SetupHTTPHandlers(repo Repository, repoMongo RepositoryMongo, redisRepo RedisRepository, rabbitMQ Messaging) map[string]interface{} {
+	getNotificationsUseCase := notificationUseCase.NewGetNotificationsUseCase(repoMongo)
+	getNotificationsHandler := notification.NewGetNotificationsHandler(getNotificationsUseCase)
 
-	return map[string]interface{}{}
+	return map[string]interface{}{
+		"getnotifications": getNotificationsHandler,
+	}
 }
 func SetupWSHandlers(repo Repository, userRedisRepo UserRedisRepository) map[string]interface{} {
 
