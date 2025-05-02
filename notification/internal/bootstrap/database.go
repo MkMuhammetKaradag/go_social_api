@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"socialmedia/notification/domain"
 	"socialmedia/notification/internal/initializer"
 	"socialmedia/notification/pkg/config"
 
@@ -13,6 +14,7 @@ type Repository interface {
 }
 type RepositoryMongo interface {
 	CreateUser(ctx context.Context, userID uuid.UUID, username string) error
+	CreateNotification(ctx context.Context, notification domain.Notification) error
 }
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)
@@ -21,7 +23,7 @@ type RedisRepository interface {
 func InitDatabase(config config.Config) Repository {
 	return initializer.InitDatabase(config)
 }
-func InitDatabaseMongo(config config.Config) Repository {
+func InitDatabaseMongo(config config.Config) RepositoryMongo {
 	return initializer.InitDatabaseMongo(config)
 }
 

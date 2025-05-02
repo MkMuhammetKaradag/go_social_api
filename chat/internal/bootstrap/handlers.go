@@ -40,7 +40,7 @@ func SetupMessageHandlers(repo Repository, redisRepo RedisRepository) map[messag
 }
 
 func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo ChatRedisRepository, rabbitMQ Messaging) map[string]interface{} {
-	createConversationUseCase := chatUseCase.NewCreateConversationUseCase(repo)
+	createConversationUseCase := chatUseCase.NewCreateConversationUseCase(repo, rabbitMQ)
 	createMessageUseCase := chatUseCase.NewCreateMessageUseCase(repo, chatRedisRepo)
 
 	createConversationHandler := chat.NewCreateConversationHandler(createConversationUseCase)

@@ -20,12 +20,12 @@ func NewCreateUserUseCase(repository Repository, repositoryMongo RepositoryMongo
 
 func (u *createUserUseCase) Execute(ctx context.Context, userID uuid.UUID, userName string) error {
 
-	err := u.repository.CreateUser(ctx, userID, userName)
-	if err != nil {
-		return err
+	// err := u.repository.CreateUser(ctx, userID, userName)
+	// if err != nil {
+	// 	return err
 
-	}
-	err = u.repositoryMongo.CreateUser(ctx, userID, userName)
+	// }
+	err := u.repositoryMongo.CreateUser(ctx, userID, userName)
 	if err != nil {
 		return err
 

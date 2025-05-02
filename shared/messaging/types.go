@@ -44,4 +44,7 @@ var FollowTypes = struct {
 	UserCreated: "user_created",
 }
 var ChatTypes = struct {
-}{}
+	UserBlockedInGroupConversation MessageType
+}{
+	UserBlockedInGroupConversation: "user_blockedIn_group_conversation",
+}

@@ -2,8 +2,9 @@ package usecase
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"socialmedia/chat/domain"
+	"socialmedia/shared/messaging"
 	"socialmedia/shared/middlewares"
 
 	"github.com/gofiber/fiber/v2"
@@ -12,11 +13,13 @@ import (
 
 type createConversationUseCase struct {
 	repository Repository
+	rabbitMQ   RabbitMQ
 }
 
-func NewCreateConversationUseCase(repository Repository) CreateConversationUseCase {
+func NewCreateConversationUseCase(repository Repository, rabbitMQ RabbitMQ) CreateConversationUseCase {
 	return &createConversationUseCase{
 		repository: repository,
+		rabbitMQ:   rabbitMQ,
 	}
 }
 
@@ -57,9 +60,31 @@ func (u *createConversationUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 		return err
 
 	}
+
+	blockedPairs := make([]map[string]string, 0)
+	for _, b := range *blockedParticipant {
+		blockedPairs = append(blockedPairs, map[string]string{
+			"blocker_id": b.BlockerID.String(),
+			"blocked_id": b.BlockedID.String(),
+		})
+	}
 	if blockedParticipant != nil && len(*blockedParticipant) > 0 {
-		fmt.Println("conversation ID:", conversation.ID, "block partispant:", blockedParticipant)
-		fmt.Println("bildirim yollandı")
+		blockedEvent := messaging.Message{
+			Type:       messaging.ChatTypes.UserBlockedInGroupConversation,
+			ToServices: []messaging.ServiceType{messaging.NotificationService},
+			Data: map[string]interface{}{
+				"entity_type":     "conversation",
+				"actor_id":        currentUserID.String(),
+				"conversation_id": conversation.ID.String(),
+				"group_name":      name,
+				"blocked_pairs":   blockedPairs,
+			},
+			Critical: false,
+		}
+		if err := u.rabbitMQ.PublishMessage(ctx, blockedEvent); err != nil {
+			log.Printf("notification  message could not be sent: %v", err)
+			// return err
+		}
 	}
 
 	return nil
