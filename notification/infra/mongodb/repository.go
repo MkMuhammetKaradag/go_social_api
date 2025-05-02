@@ -171,3 +171,35 @@ func (r *Repository) GetNotificationsByUserID(ctx context.Context, userID string
 
 	return notifications, nil
 }
+
+// MarkNotificationAsRead - Bildirimi okundu olarak işaretler
+func (r *Repository) MarkNotificationAsRead(ctx context.Context, notificationID string, userID string) error {
+
+	if _, err := uuid.Parse(userID); err != nil {
+		return fmt.Errorf("invalid userID format, must be UUID: %w", err)
+	}
+
+	collection := r.GetCollection("notifications")
+
+	// Güncelleme sorgusu
+	filter := bson.M{"_id": notificationID, "userId": userID}
+	update := bson.M{
+		"$set": bson.M{
+			"read":      true,
+			"updatedAt": time.Now(),
+		},
+	}
+
+	// Güncelleme işlemi
+	result, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to update notification: %w", err)
+	}
+
+	// Eğer hiçbir belge etkilenmediyse
+	if result.MatchedCount == 0 {
+		return fmt.Errorf("notification not found with ID: %s", notificationID)
+	}
+
+	return nil
+}

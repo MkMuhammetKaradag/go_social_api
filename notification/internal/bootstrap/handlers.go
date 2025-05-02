@@ -27,8 +27,12 @@ func SetupHTTPHandlers(repo Repository, repoMongo RepositoryMongo, redisRepo Red
 	getNotificationsUseCase := notificationUseCase.NewGetNotificationsUseCase(repoMongo)
 	getNotificationsHandler := notification.NewGetNotificationsHandler(getNotificationsUseCase)
 
+	markNotificationUseCase := notificationUseCase.NewMarkNotificationUseCase(repoMongo)
+	markNotificationHandler := notification.NewMarkNotificationHandler(markNotificationUseCase)
+
 	return map[string]interface{}{
 		"getnotifications": getNotificationsHandler,
+		"marknotification": markNotificationHandler,
 	}
 }
 func SetupWSHandlers(repo Repository, userRedisRepo UserRedisRepository) map[string]interface{} {

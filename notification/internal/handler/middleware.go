@@ -59,6 +59,7 @@ func HandleWithFiberWS[R Request](handler FiberWSHandler[R]) fiber.Handler {
 }
 
 func parseRequest[R any](c *fiber.Ctx, req *R) error {
+
 	if err := c.BodyParser(req); err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
 		return err
 	}
