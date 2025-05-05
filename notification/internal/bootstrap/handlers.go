@@ -33,10 +33,14 @@ func SetupHTTPHandlers(repo Repository, repoMongo RepositoryMongo, redisRepo Red
 	deleteNotificationUseCase := notificationUseCase.NewDeleteNotificationUseCase(repoMongo)
 	deleteNotificationHandler := notification.NewDeleteNotificationHandler(deleteNotificationUseCase)
 
+	readAllNotificationsUseCase := notificationUseCase.NewReadAllNotificationsUseCase(repoMongo)
+	readAllNotificationsHandler := notification.NewReadAllNotificationsHandler(readAllNotificationsUseCase)
+
 	return map[string]interface{}{
-		"getnotifications":   getNotificationsHandler,
-		"marknotification":   markNotificationHandler,
-		"deletenotification": deleteNotificationHandler,
+		"getnotifications":     getNotificationsHandler,
+		"marknotification":     markNotificationHandler,
+		"deletenotification":   deleteNotificationHandler,
+		"readallnotifications": readAllNotificationsHandler,
 	}
 }
 func SetupWSHandlers(repo Repository, userRedisRepo UserRedisRepository) map[string]interface{} {

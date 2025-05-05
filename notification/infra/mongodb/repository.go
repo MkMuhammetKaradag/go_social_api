@@ -224,3 +224,30 @@ func (r *Repository) DeleteNotification(ctx context.Context, userID, notificatio
 
 	return nil
 }
+
+func (r *Repository) ReadAllNotificationsByUserID(ctx context.Context, userID string) error {
+	if _, err := uuid.Parse(userID); err != nil {
+		return fmt.Errorf("invalid userID FORMAT,MUST BE uuıd: %w ", err)
+	}
+	collection := r.GetCollection("notifications")
+	filter := bson.M{
+		"userId": userID,
+		"read":   false,
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"read":     true,
+			"updateAt": time.Now(),
+		},
+	}
+
+	result, err := collection.UpdateMany(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("faild to update notification: %w", err)
+	}
+	if result.MatchedCount == 0 {
+		return fmt.Errorf("no notificationsUpdate")
+	}
+	return nil
+
+}
