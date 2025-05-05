@@ -251,3 +251,16 @@ func (r *Repository) ReadAllNotificationsByUserID(ctx context.Context, userID st
 	return nil
 
 }
+
+func (r *Repository) DeleteAllNotificationsByUserID(ctx context.Context, userID string) error {
+	collection := r.GetCollection("notifications")
+
+	filter := bson.M{"userId": userID}
+
+	_, err := collection.DeleteMany(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to delete notification: %w", err)
+	}
+
+	return nil
+}

@@ -34,6 +34,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 	markNotificationHandler := httpHandlers["marknotification"].(*notification.MarkNotificationHandler)
 	deleteNotificationHandler := httpHandlers["deletenotification"].(*notification.DeleteNotificationHandeler)
 	readAllNotificationsHandler := httpHandlers["readallnotifications"].(*notification.ReadAllNotificationsHandler)
+	deleteAllNotificationsHandler := httpHandlers["deleteallnotifications"].(*notification.DeleteAllNotificationsHandler)
 
 	// Korumalı rotalar
 	authMiddleware := middlewares.NewAuthMiddleware(redisRepo)
@@ -42,10 +43,11 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 
 		protected.Get("/notifications", handler.HandleWithFiber[notification.GetNotificationsRequest, notification.GetNotificationsResponse](getNotificationsHandler))
 		protected.Patch("/notification/:notification_id/read", handler.HandleWithFiber[notification.MarkNotificationRequest, notification.MarkNotificationResponse](markNotificationHandler))
-		
+
 		protected.Patch("/notification/read-all", handler.HandleWithFiber[notification.ReadAllNotificationsRequest, notification.ReadAllNotificationsResponse](readAllNotificationsHandler))
 
 		protected.Delete("/notification/:notification_id", handler.HandleWithFiber[notification.DeleteNotificationRequest, notification.DeleteNotificationResponse](deleteNotificationHandler))
+		protected.Delete("/notification", handler.HandleWithFiber[notification.DeleteAllNotificationsRequest, notification.DeleteAllNotificationsResponse](deleteAllNotificationsHandler))
 
 	}
 

@@ -22,6 +22,10 @@ type DeleteNotificationUseCase interface {
 type ReadAllNotificationsUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context) error
 }
+
+type DeleteAllNotificationsUseCase interface {
+	Execute(fbrCtx *fiber.Ctx, ctx context.Context) error
+}
 type RabbitMQ interface {
 	PublishMessage(ctx context.Context, msg messaging.Message) error
 }
@@ -30,6 +34,7 @@ type Repository interface {
 	MarkNotificationAsRead(ctx context.Context, notificationID string, userID string) error
 	DeleteNotification(ctx context.Context, userID, notificationID string) error
 	ReadAllNotificationsByUserID(ctx context.Context, userID string) error
+	DeleteAllNotificationsByUserID(ctx context.Context, userID string) error
 }
 
 type RedisRepository interface {

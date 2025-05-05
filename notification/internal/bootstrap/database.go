@@ -19,6 +19,7 @@ type RepositoryMongo interface {
 	MarkNotificationAsRead(ctx context.Context, notificationID string, userID string) error
 	DeleteNotification(ctx context.Context, userID, notificationID string) error
 	ReadAllNotificationsByUserID(ctx context.Context, userID string) error
+	DeleteAllNotificationsByUserID(ctx context.Context, userID string) error
 }
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)
