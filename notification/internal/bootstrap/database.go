@@ -20,6 +20,7 @@ type RepositoryMongo interface {
 	DeleteNotification(ctx context.Context, userID, notificationID string) error
 	ReadAllNotificationsByUserID(ctx context.Context, userID string) error
 	DeleteAllNotificationsByUserID(ctx context.Context, userID string) error
+	GetUnreadNotificationsByUserID(ctx context.Context, userID string, limit, skip int64) ([]domain.Notification, error)
 }
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)

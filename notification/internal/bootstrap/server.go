@@ -31,6 +31,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 	})
 
 	getNotificationsHandler := httpHandlers["getnotifications"].(*notification.GetNotificationsHandler)
+	getUnreadNotificationsHandler := httpHandlers["getunreadnotifications"].(*notification.GetUnreadNotificationsHandler)
 	markNotificationHandler := httpHandlers["marknotification"].(*notification.MarkNotificationHandler)
 	deleteNotificationHandler := httpHandlers["deletenotification"].(*notification.DeleteNotificationHandeler)
 	readAllNotificationsHandler := httpHandlers["readallnotifications"].(*notification.ReadAllNotificationsHandler)
@@ -41,13 +42,15 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 	protected := app.Group("/", authMiddleware.Authenticate())
 	{
 
-		protected.Get("/notifications", handler.HandleWithFiber[notification.GetNotificationsRequest, notification.GetNotificationsResponse](getNotificationsHandler))
+		protected.Get("/notification", handler.HandleWithFiber[notification.GetNotificationsRequest, notification.GetNotificationsResponse](getNotificationsHandler))
+		protected.Get("/notification/unread", handler.HandleWithFiber[notification.GetUnreadNotificationsRequest, notification.GetUnreadNotificationsResponse](getUnreadNotificationsHandler))
 		protected.Patch("/notification/:notification_id/read", handler.HandleWithFiber[notification.MarkNotificationRequest, notification.MarkNotificationResponse](markNotificationHandler))
 
 		protected.Patch("/notification/read-all", handler.HandleWithFiber[notification.ReadAllNotificationsRequest, notification.ReadAllNotificationsResponse](readAllNotificationsHandler))
 
-		protected.Delete("/notification/:notification_id", handler.HandleWithFiber[notification.DeleteNotificationRequest, notification.DeleteNotificationResponse](deleteNotificationHandler))
 		protected.Delete("/notification", handler.HandleWithFiber[notification.DeleteAllNotificationsRequest, notification.DeleteAllNotificationsResponse](deleteAllNotificationsHandler))
+
+		protected.Delete("/notification/:notification_id", handler.HandleWithFiber[notification.DeleteNotificationRequest, notification.DeleteNotificationResponse](deleteNotificationHandler))
 
 	}
 

@@ -27,6 +27,9 @@ func SetupHTTPHandlers(repo Repository, repoMongo RepositoryMongo, redisRepo Red
 	getNotificationsUseCase := notificationUseCase.NewGetNotificationsUseCase(repoMongo)
 	getNotificationsHandler := notification.NewGetNotificationsHandler(getNotificationsUseCase)
 
+	getUnreadNotificationsUseCase := notificationUseCase.NewGetUnreadNotificationsUseCase(repoMongo)
+	getUnreadNotificationsHandler := notification.NewGetUnreadNotificationsHandler(getUnreadNotificationsUseCase)
+
 	markNotificationUseCase := notificationUseCase.NewMarkNotificationUseCase(repoMongo)
 	markNotificationHandler := notification.NewMarkNotificationHandler(markNotificationUseCase)
 
@@ -41,6 +44,7 @@ func SetupHTTPHandlers(repo Repository, repoMongo RepositoryMongo, redisRepo Red
 
 	return map[string]interface{}{
 		"getnotifications":       getNotificationsHandler,
+		"getunreadnotifications": getUnreadNotificationsHandler,
 		"marknotification":       markNotificationHandler,
 		"deletenotification":     deleteNotificationHandler,
 		"readallnotifications":   readAllNotificationsHandler,

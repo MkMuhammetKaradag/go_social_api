@@ -11,6 +11,10 @@ import (
 type GetNotificationsUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context, limit, skip int64) ([]domain.Notification, error)
 }
+type GetUnreadNotificationsUseCase interface {
+	Execute(fbrCtx *fiber.Ctx, ctx context.Context, limit, skip int64) ([]domain.Notification, error)
+}
+
 type MarkNotificationUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context, notificationID string) error
 }
@@ -35,6 +39,7 @@ type Repository interface {
 	DeleteNotification(ctx context.Context, userID, notificationID string) error
 	ReadAllNotificationsByUserID(ctx context.Context, userID string) error
 	DeleteAllNotificationsByUserID(ctx context.Context, userID string) error
+	GetUnreadNotificationsByUserID(ctx context.Context, userID string, limit, skip int64) ([]domain.Notification, error)
 }
 
 type RedisRepository interface {
