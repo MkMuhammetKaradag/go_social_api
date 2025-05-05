@@ -32,16 +32,16 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 
 	getNotificationsHandler := httpHandlers["getnotifications"].(*notification.GetNotificationsHandler)
 	markNotificationHandler := httpHandlers["marknotification"].(*notification.MarkNotificationHandler)
+	deleteNotificationHandler := httpHandlers["deletenotification"].(*notification.DeleteNotificationHandeler)
+
 	// Korumalı rotalar
 	authMiddleware := middlewares.NewAuthMiddleware(redisRepo)
 	protected := app.Group("/", authMiddleware.Authenticate())
 	{
 
-		protected.Get("/", func(c *fiber.Ctx) error {
-			return c.SendString("Hello, World-2!")
-		})
 		protected.Get("/notifications", handler.HandleWithFiber[notification.GetNotificationsRequest, notification.GetNotificationsResponse](getNotificationsHandler))
 		protected.Patch("/notification/:notification_id/read", handler.HandleWithFiber[notification.MarkNotificationRequest, notification.MarkNotificationResponse](markNotificationHandler))
+		protected.Delete("/notification/:notification_id", handler.HandleWithFiber[notification.DeleteNotificationRequest, notification.DeleteNotificationResponse](deleteNotificationHandler))
 
 	}
 

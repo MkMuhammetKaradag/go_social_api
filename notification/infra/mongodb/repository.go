@@ -203,3 +203,24 @@ func (r *Repository) MarkNotificationAsRead(ctx context.Context, notificationID 
 
 	return nil
 }
+
+// DeleteNotification - Bir bildirimi siler
+func (r *Repository) DeleteNotification(ctx context.Context, userID, notificationID string) error {
+	collection := r.GetCollection("notifications")
+
+	// Silme sorgusu
+	filter := bson.M{"_id": notificationID, "userId": userID}
+
+	// Silme işlemi
+	result, err := collection.DeleteOne(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to delete notification: %w", err)
+	}
+
+	// Eğer hiçbir belge etkilenmediyse
+	if result.DeletedCount == 0 {
+		return fmt.Errorf("notification not found with ID: %s", notificationID)
+	}
+
+	return nil
+}
