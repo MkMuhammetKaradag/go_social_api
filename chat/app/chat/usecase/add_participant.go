@@ -29,9 +29,15 @@ func (uc *addParticipantUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context,
 	if err != nil {
 		return err
 	}
+
+	isblock, _ := uc.repository.HasBlockRelationship(ctx, currentUserID, userID)
+	if isblock {
+		return domain.ErrBlockedUser
+	}
 	err = uc.repository.AddParticipant(ctx, conversationID, userID, currentUserID)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

@@ -390,3 +390,33 @@ func (r *Repository) GetParticipants(ctx context.Context, conversationID uuid.UU
 
 	return participants, nil
 }
+func (r *Repository) PromoteToAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error {
+	isAdmin, err := r.IsUserAdmin(ctx, conversationID, currentUserID)
+	if err != nil {
+		return fmt.Errorf("failed to check admin rights: %w", err)
+	}
+	if !isAdmin {
+		return fmt.Errorf("unauthorized: only admins can promote others")
+	}
+
+	// Şimdi hedef kullanıcıyı admin yap
+	query := `
+		UPDATE conversation_participants
+		SET is_admin = true
+		WHERE conversation_id = $1 AND user_id = $2
+	`
+	res, err := r.db.ExecContext(ctx, query, conversationID, targetUserID)
+	if err != nil {
+		return fmt.Errorf("failed to promote user to admin: %w", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check update result: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found in the conversation")
+	}
+
+	return nil
+}
