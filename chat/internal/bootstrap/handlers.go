@@ -44,11 +44,13 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 	createMessageUseCase := chatUseCase.NewCreateMessageUseCase(repo, chatRedisRepo)
 	addParticipantUseCase := chatUseCase.NewAddParticipantUseCase(repo)
 	promoteToAdminUseCase := chatUseCase.NewPromoteToAdminUseCase(repo)
+	demoteFromAdminUseCase := chatUseCase.NewDemoteFromAdminUseCase(repo)
 
 	createConversationHandler := chat.NewCreateConversationHandler(createConversationUseCase)
 	createMessageHandler := chat.NewCreateMessageHandler(createMessageUseCase)
 	addParticipantHandler := chat.NewAddParticipantHandler(addParticipantUseCase)
 	promoteToAdminHandler := chat.NewPromoteToAdminHandler(promoteToAdminUseCase)
+	demoteFromAdminHandler := chat.NewDemoteFromAdminHandler(demoteFromAdminUseCase)
 
 	return map[string]interface{}{
 
@@ -56,6 +58,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 		"createmessage":      createMessageHandler,
 		"addparticipant":     addParticipantHandler,
 		"promotetoadmin":     promoteToAdminHandler,
+		"demotefromadmin":    demoteFromAdminHandler,
 	}
 }
 func SetupWSHandlers(repo Repository, chatRedisRepo ChatRedisRepository, wsHub Hub) map[string]interface{} {

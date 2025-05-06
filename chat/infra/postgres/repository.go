@@ -420,3 +420,39 @@ func (r *Repository) PromoteToAdmin(ctx context.Context, conversationID, targetU
 
 	return nil
 }
+func (r *Repository) DemoteFromAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error {
+	// Önce currentUserID gerçekten admin mi diye kontrol et
+	isAdmin, err := r.IsUserAdmin(ctx, conversationID, currentUserID)
+	if err != nil {
+		return fmt.Errorf("failed to check admin rights: %w", err)
+	}
+	if !isAdmin {
+		return fmt.Errorf("unauthorized: only admins can demote others")
+	}
+
+	// Kendini düşürmeyi engelle (opsiyonel ama önerilir)
+	if currentUserID == targetUserID {
+		return fmt.Errorf("admins cannot demote themselves")
+	}
+
+	// Hedef kullanıcıyı adminlikten düşür
+	query := `
+		UPDATE conversation_participants
+		SET is_admin = false
+		WHERE conversation_id = $1 AND user_id = $2
+	`
+	res, err := r.db.ExecContext(ctx, query, conversationID, targetUserID)
+	if err != nil {
+		return fmt.Errorf("failed to demote user from admin: %w", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check update result: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found in the conversation")
+	}
+
+	return nil
+}
