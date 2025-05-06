@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS conversation_participants (
   conversation_id UUID NOT NULL,
   user_id UUID NOT NULL,
   joined_at TIMESTAMP DEFAULT NOW(),
+  is_admin BOOLEAN DEFAULT false,
   PRIMARY KEY (conversation_id, user_id),
   FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 )`

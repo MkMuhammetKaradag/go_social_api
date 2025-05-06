@@ -105,7 +105,7 @@ func (r *Repository) UpdateUser(ctx context.Context, userID uuid.UUID, userName,
 	return nil
 }
 
-func (r *Repository) CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, *[]domain.BlockedParticipant, error) {
+func (r *Repository) CreateConversation(ctx context.Context, currentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, *[]domain.BlockedParticipant, error) {
 	// Bloklanmış kullanıcıları tutacak slice
 	var blockedParticipants []domain.BlockedParticipant
 	query := `
@@ -122,6 +122,10 @@ func (r *Repository) CreateConversation(ctx context.Context, currrentUserID uuid
 		Scan(&convo.ID, &convo.CreatedAt)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create conversation: %w", err)
+	}
+	err = r.addInitialAdmin(ctx, convo.ID, currentUserID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to add initial admin: %w", err)
 	}
 
 	// Tüm kullanıcılar arasındaki blok ilişkilerini kontrol et
@@ -147,7 +151,10 @@ func (r *Repository) CreateConversation(ctx context.Context, currrentUserID uuid
 
 	// Katılımcıları ekle
 	for _, uid := range userIDs {
-		err := r.AddParticipant(ctx, convo.ID, uid, currrentUserID)
+		if uid == currentUserID {
+			continue
+		}
+		err := r.AddParticipant(ctx, convo.ID, uid, currentUserID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to add participant: %w", err)
 		}
@@ -182,26 +189,39 @@ func (r *Repository) GetBlockedParticipantsForUser(ctx context.Context, conversa
 
 	return blockedUsers, nil
 }
-func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID uuid.UUID, currentUserID uuid.UUID) error {
+func (r *Repository) addInitialAdmin(ctx context.Context, conversationID, userID uuid.UUID) error {
+	query := `
+		INSERT INTO conversation_participants (conversation_id, user_id, is_admin)
+		VALUES ($1, $2, true)
+	`
+	_, err := r.db.ExecContext(ctx, query, conversationID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to add initial admin: %w", err)
+	}
+	return nil
+}
+func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID uuid.UUID, addedByUserID uuid.UUID) error {
+
+	isAdderAdmin, err := r.IsUserAdmin(ctx, conversationID, addedByUserID)
+	if err != nil {
+		return fmt.Errorf("failed to check admin rights: %w", err)
+	}
+	if !isAdderAdmin {
+		return fmt.Errorf("user %s is not an admin of conversation %s", addedByUserID, conversationID)
+	}
+
 	isPrivate, err := r.IsUserPrivate(ctx, userID)
 	if err != nil {
 		return err
 	}
-	// blocked, err := r.HasBlockRelationship(ctx, currentUserID, userID)
-	// if err != nil {
-	// 	return err
-	// }
-	// if blocked {
-	// 	return nil
-	// }
 
 	if isPrivate {
-		areFriends, err := r.AreUsersFriends(ctx, currentUserID, userID)
+		areFriends, err := r.AreUsersFriends(ctx, addedByUserID, userID)
 		if err != nil {
 			return err
 		}
 		if !areFriends {
-			return nil //fmt.Errorf("user %s is private and not friends with %s", userID, currentUserID)
+			return nil 
 		}
 	}
 
@@ -319,6 +339,22 @@ func (r *Repository) IsUserPrivate(ctx context.Context, userID uuid.UUID) (bool,
 		return false, fmt.Errorf("failed to check privacy status: %w", err)
 	}
 	return isPrivate, nil
+}
+func (r *Repository) IsUserAdmin(ctx context.Context, conversationID, userID uuid.UUID) (bool, error) {
+	var isAdmin bool
+	query := `
+		SELECT is_admin
+		FROM conversation_participants
+		WHERE conversation_id = $1 AND user_id = $2
+	`
+	err := r.db.QueryRowContext(ctx, query, conversationID, userID).Scan(&isAdmin)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return isAdmin, nil
 }
 
 func (r *Repository) AreUsersFriends(ctx context.Context, userA, userB uuid.UUID) (bool, error) {
