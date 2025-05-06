@@ -19,7 +19,9 @@ type CreateMessageUseCase interface {
 type ChatWebSocketListenUseCase interface {
 	Execute(c *websocketFiber.Conn, ctx context.Context, userID, conversationID uuid.UUID)
 }
-
+type AddParticipantUseCase interface {
+	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, conversationID, userID uuid.UUID) error
+}
 type Hub interface {
 	RegisterClient(client *domain.Client, userID uuid.UUID)
 	UnregisterClient(client *domain.Client, userID uuid.UUID)
@@ -38,6 +40,7 @@ type Repository interface {
 	GetParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error)
 	IsBlocked(ctx context.Context, userID, targetID uuid.UUID) (bool, error)
 	HasBlockRelationship(ctx context.Context, userID1, userID2 uuid.UUID) (bool, error)
+	AddParticipant(ctx context.Context, conversationID, userID, addedByUserID uuid.UUID) error
 }
 
 type RedisRepository interface {

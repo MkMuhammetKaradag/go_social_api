@@ -200,7 +200,7 @@ func (r *Repository) addInitialAdmin(ctx context.Context, conversationID, userID
 	}
 	return nil
 }
-func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID uuid.UUID, addedByUserID uuid.UUID) error {
+func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID, addedByUserID uuid.UUID) error {
 
 	isAdderAdmin, err := r.IsUserAdmin(ctx, conversationID, addedByUserID)
 	if err != nil {
@@ -221,7 +221,7 @@ func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID 
 			return err
 		}
 		if !areFriends {
-			return nil 
+			return nil
 		}
 	}
 

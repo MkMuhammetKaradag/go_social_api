@@ -30,6 +30,7 @@ type Repository interface {
 	// IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error)
 	GetParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error)
 	IsBlocked(ctx context.Context, userID, targetID uuid.UUID) (bool, error)
+	AddParticipant(ctx context.Context, conversationID, userID, addedByUserID uuid.UUID) error
 }
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)

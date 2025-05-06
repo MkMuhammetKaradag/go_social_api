@@ -31,6 +31,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 	createConversationHandler := httpHandlers["createconversation"].(*chat.CreateConversationHandler)
 	createMessageHandler := httpHandlers["createmessage"].(*chat.CreateMessageHandler)
 	chatListenHandler := wsHandlers["chatlisten"].(*chat.ChatWebSocketListenHandler)
+	addParticipantHandler := httpHandlers["addparticipant"].(*chat.AddParticipantHandler)
 
 	// Korumalı rotalar
 
@@ -39,6 +40,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 	{
 		protected.Post("/createconversation", handler.HandleWithFiber[chat.CreateConversationRequest, chat.CreateConversationResponse](createConversationHandler))
 		protected.Post("/createmessage", handler.HandleWithFiber[chat.CreateMessageRequest, chat.CreateMessageResponse](createMessageHandler))
+		protected.Post("/conservation/:conservation_id/add-participant", handler.HandleWithFiber[chat.AddParticipantRequest, chat.AddParticipantResponse](addParticipantHandler))
 
 		wsRoute := app.Group("/ws")
 		wsRoute.Get("/message/:chatID", handler.HandleWithFiberWS[chat.ChatWebSocketListenRequest](chatListenHandler))
