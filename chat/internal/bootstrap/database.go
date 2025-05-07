@@ -31,6 +31,7 @@ type Repository interface {
 	GetParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error)
 	IsBlocked(ctx context.Context, userID, targetID uuid.UUID) (bool, error)
 	AddParticipant(ctx context.Context, conversationID, userID, addedByUserID uuid.UUID) error
+	RemoveParticipant(ctx context.Context, conversationID, userID, addedByUserID uuid.UUID) error
 
 	PromoteToAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error
 	DemoteFromAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error

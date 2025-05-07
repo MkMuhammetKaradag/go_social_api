@@ -22,6 +22,9 @@ type ChatWebSocketListenUseCase interface {
 type AddParticipantUseCase interface {
 	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, conversationID, userID uuid.UUID) error
 }
+type RemoveParticipantUseCase interface {
+	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, conversationID, userID uuid.UUID) error
+}
 type PromoteToAdminUseCase interface {
 	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, conversationID, userID uuid.UUID) error
 }
@@ -47,6 +50,7 @@ type Repository interface {
 	IsBlocked(ctx context.Context, userID, targetID uuid.UUID) (bool, error)
 	HasBlockRelationship(ctx context.Context, userID1, userID2 uuid.UUID) (bool, error)
 	AddParticipant(ctx context.Context, conversationID, userID, addedByUserID uuid.UUID) error
+	RemoveParticipant(ctx context.Context, conversationID, userID, addedByUserID uuid.UUID) error
 	PromoteToAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error
 	DemoteFromAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error
 }

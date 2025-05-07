@@ -456,3 +456,24 @@ func (r *Repository) DemoteFromAdmin(ctx context.Context, conversationID, target
 
 	return nil
 }
+
+func (r *Repository) RemoveParticipant(ctx context.Context, conversationID, userID, addedByUserID uuid.UUID) error {
+
+	isAdderAdmin, err := r.IsUserAdmin(ctx, conversationID, addedByUserID)
+	if err != nil {
+		return fmt.Errorf("failed to check admin rights: %w", err)
+	}
+	if !isAdderAdmin {
+		return fmt.Errorf("user %s is not an admin of conversation %s", addedByUserID, conversationID)
+	}
+
+	query := `
+	DELETE FROM conversation_participants
+	WHERE conversation_id = $1 AND user_id = $2
+`
+	_, err = r.db.ExecContext(ctx, query, conversationID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to remove participant: %w", err)
+	}
+	return nil
+}

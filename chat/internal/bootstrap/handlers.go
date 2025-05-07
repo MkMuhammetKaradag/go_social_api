@@ -43,12 +43,14 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 	createConversationUseCase := chatUseCase.NewCreateConversationUseCase(repo, rabbitMQ)
 	createMessageUseCase := chatUseCase.NewCreateMessageUseCase(repo, chatRedisRepo)
 	addParticipantUseCase := chatUseCase.NewAddParticipantUseCase(repo)
+	removeParticipantUseCase := chatUseCase.NewRemoveParticipantUseCase(repo)
 	promoteToAdminUseCase := chatUseCase.NewPromoteToAdminUseCase(repo)
 	demoteFromAdminUseCase := chatUseCase.NewDemoteFromAdminUseCase(repo)
 
 	createConversationHandler := chat.NewCreateConversationHandler(createConversationUseCase)
 	createMessageHandler := chat.NewCreateMessageHandler(createMessageUseCase)
 	addParticipantHandler := chat.NewAddParticipantHandler(addParticipantUseCase)
+	removeParticipantHandler := chat.NewRemoveParticipantHandler(removeParticipantUseCase)
 	promoteToAdminHandler := chat.NewPromoteToAdminHandler(promoteToAdminUseCase)
 	demoteFromAdminHandler := chat.NewDemoteFromAdminHandler(demoteFromAdminUseCase)
 
@@ -57,6 +59,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 		"createconversation": createConversationHandler,
 		"createmessage":      createMessageHandler,
 		"addparticipant":     addParticipantHandler,
+		"removeparticipant":  removeParticipantHandler,
 		"promotetoadmin":     promoteToAdminHandler,
 		"demotefromadmin":    demoteFromAdminHandler,
 	}
