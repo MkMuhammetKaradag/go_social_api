@@ -60,4 +60,5 @@ type RedisRepository interface {
 }
 type ChatRedisRepository interface {
 	PublishChatMessage(ctx context.Context, channelName string, message *domain.Message) error
+	PublishKickUserConversation(ctx context.Context, channelName string, message *domain.KickUserConservation) error
 }

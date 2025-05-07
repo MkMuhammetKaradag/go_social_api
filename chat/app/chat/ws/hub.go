@@ -8,7 +8,9 @@ import (
 	"socialmedia/chat/domain"
 	"sync"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/google/uuid"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -29,8 +31,9 @@ type Hub struct {
 	redisClient *redis.Client
 
 	// Alt bileşenler
-	messageHub *MessageHub
-	statusHub  *StatusHub
+	messageHub  *MessageHub
+	statusHub   *StatusHub
+	userKickHub *UserKickHub
 
 	// Eşzamanlılık koruması
 	mutex sync.RWMutex
@@ -54,6 +57,7 @@ func NewHub(redisClient *redis.Client, repo Repository) *Hub {
 	// Alt bileşenleri oluştur
 	hub.messageHub = NewMessageHub(redisClient, hub)
 	hub.statusHub = NewStatusHub(redisClient, hub)
+	hub.userKickHub = NewUserKickHub(redisClient, hub)
 
 	return hub
 }
@@ -77,6 +81,7 @@ func (h *Hub) Run(ctx context.Context) {
 	// Alt bileşenleri başlat
 	go h.messageHub.Run(ctx)
 	go h.statusHub.Run(ctx)
+	go h.userKickHub.Run(ctx)
 }
 
 // RegisterClient bir WebSocket bağlantısını Hub'a kaydeder ve kullanıcıyı sohbetle ilişkilendirir
@@ -232,4 +237,34 @@ func (h *Hub) IsBlocked(ctx context.Context, blockerID, blockedID uuid.UUID) boo
 		return false
 	}
 	return exists
+}
+func (h *Hub) KickUserFromConversation(conversationID uuid.UUID, userID uuid.UUID) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	clients, ok := h.clients[conversationID]
+	if !ok {
+		return
+	}
+
+	for client := range clients {
+		if client.UserID == userID {
+			log.Printf("Kicking user %s from conversation %s\n", userID, conversationID)
+
+			// Bağlantıyı kapat
+			client.Conn.WriteMessage(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "You have been removed from the conversation by admin."),
+			)
+			client.Conn.Close()
+
+			// Haritadan çıkar
+			delete(clients, client)
+		}
+	}
+
+	// conversationUsers listesinden de çıkar
+	if users, exists := h.conversationUsers[conversationID]; exists {
+		delete(users, userID.String())
+	}
 }

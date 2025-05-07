@@ -43,7 +43,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 	createConversationUseCase := chatUseCase.NewCreateConversationUseCase(repo, rabbitMQ)
 	createMessageUseCase := chatUseCase.NewCreateMessageUseCase(repo, chatRedisRepo)
 	addParticipantUseCase := chatUseCase.NewAddParticipantUseCase(repo)
-	removeParticipantUseCase := chatUseCase.NewRemoveParticipantUseCase(repo)
+	removeParticipantUseCase := chatUseCase.NewRemoveParticipantUseCase(repo, chatRedisRepo)
 	promoteToAdminUseCase := chatUseCase.NewPromoteToAdminUseCase(repo)
 	demoteFromAdminUseCase := chatUseCase.NewDemoteFromAdminUseCase(repo)
 

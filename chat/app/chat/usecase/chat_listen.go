@@ -40,9 +40,6 @@ func (u *chatWebSocketListenUseCase) Execute(c *websocketFiber.Conn, ctx context
 		return
 	}
 
-	// Redis kanalını dinlemeye başla
-	// channelName := fmt.Sprintf("conversation:%s", conversationID)
-	// go u.hub.ListenRedisSendMessage(context.Background(), channelName)
 
 	// Conversation üyelerini yükle (eğer daha önce yüklenmemişse)
 	if !u.hub.IsConversationLoaded(conversationID) {
@@ -66,9 +63,7 @@ func (u *chatWebSocketListenUseCase) Execute(c *websocketFiber.Conn, ctx context
 	// Client'i hub'a kaydet (userID ile birlikte)
 	u.hub.RegisterClient(client, userID)
 
-	// // Sohbetteki tüm kullanıcıların durumlarını client'a gönder
-	// u.hub.SendInitialUserStatuses(client, conversationID)
-
+	
 	defer func() {
 		u.hub.UnregisterClient(client, userID)
 	}()

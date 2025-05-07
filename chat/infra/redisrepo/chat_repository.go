@@ -23,7 +23,10 @@ type MessageNotification struct {
 	HasAttachments bool             `json:"has_attachments"`
 	Attachments    []AttachmentInfo `json:"attachments,omitempty"`
 }
-
+type KickUserNotification struct {
+	ConversationID uuid.UUID `json:"conversation_id"`
+	UserID         uuid.UUID `json:"user_id"`
+}
 type AttachmentInfo struct {
 	ID       uuid.UUID `json:"id"`
 	FileURL  string    `json:"file_url"`
@@ -45,7 +48,7 @@ func NewChatRedisRepository(connString, password string, db int) (*ChatRedisRepo
 }
 
 func (r *ChatRedisRepository) PublishChatMessage(ctx context.Context, channelName string, message *domain.Message) error {
-	
+
 	attachments := []AttachmentInfo{}
 	for _, attachment := range message.Attachments {
 		attachments = append(attachments, AttachmentInfo{
@@ -81,4 +84,25 @@ func (r *ChatRedisRepository) PublishChatMessage(ctx context.Context, channelNam
 }
 func (r *ChatRedisRepository) GetRedisClient() *redis.Client {
 	return r.client
+}
+func (r *ChatRedisRepository) PublishKickUserConversation(ctx context.Context, channelName string, message *domain.KickUserConservation) error {
+
+	// Bildirim nesnesini oluştur
+	notification := KickUserNotification{
+		ConversationID: message.ConversationID,
+		UserID:         message.UserID,
+	}
+
+	// JSON'a dönüştür
+	notificationJson, err := json.Marshal(notification)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message notification: %w", err)
+	}
+
+	// Redis'e yayınla
+	err = r.client.Publish(ctx, channelName, notificationJson).Err()
+	if err != nil {
+		return fmt.Errorf("failed to publish message to Redis: %w", err)
+	}
+	return nil
 }

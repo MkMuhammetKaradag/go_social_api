@@ -42,6 +42,7 @@ type RedisRepository interface {
 type ChatRedisRepository interface {
 	PublishChatMessage(ctx context.Context, channelName string, message *domain.Message) error
 	GetRedisClient() *redis.Client
+	PublishKickUserConversation(ctx context.Context, channelName string, message *domain.KickUserConservation) error
 }
 type Hub interface {
 	// Run()

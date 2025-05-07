@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"socialmedia/chat/domain"
 	"socialmedia/shared/middlewares"
 
@@ -10,13 +11,16 @@ import (
 )
 
 type removeParticipantUseCase struct {
-	repository Repository
+	repository    Repository
+	chatRedisRepo ChatRedisRepository
 }
 
-func NewRemoveParticipantUseCase(repository Repository) RemoveParticipantUseCase {
+func NewRemoveParticipantUseCase(repository Repository, chatRedisRepo ChatRedisRepository) RemoveParticipantUseCase {
 	return &removeParticipantUseCase{
-		repository: repository,
+		repository:    repository,
+		chatRedisRepo: chatRedisRepo,
 	}
+
 }
 
 func (uc *removeParticipantUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Context, conversationID, userID uuid.UUID) error {
@@ -34,6 +38,13 @@ func (uc *removeParticipantUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 	if err != nil {
 		return err
 	}
-
+	notification := &domain.KickUserConservation{
+		ConversationID: conversationID,
+		UserID:         userID,
+	}
+	err = uc.chatRedisRepo.PublishKickUserConversation(ctx, "kick_user_channel", notification)
+	if err != nil {
+		fmt.Printf("Error publishing message to Redis: %v\n", err)
+	}
 	return nil
 }
