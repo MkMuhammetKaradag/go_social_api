@@ -28,7 +28,7 @@ type Repository interface {
 	IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error)
 
 	// IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error)
-	GetParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error)
+	GetParticipants(ctx context.Context, conversationID uuid.UUID) ([]domain.User, error)
 	IsBlocked(ctx context.Context, userID, targetID uuid.UUID) (bool, error)
 	AddParticipant(ctx context.Context, conversationID, userID, addedByUserID uuid.UUID) error
 	RemoveParticipant(ctx context.Context, conversationID, userID, addedByUserID uuid.UUID) error

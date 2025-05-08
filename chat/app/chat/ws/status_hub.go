@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fasthttp/websocket"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
@@ -19,6 +20,8 @@ type UserStatusNotification struct {
 	Status    string `json:"status"` // "online" veya "offline"
 	Timestamp int64  `json:"timestamp"`
 	Type      string `json:"type"` // Bildirim türü, "user_status" olarak sabit
+	Username  string `json:"username"`
+	Avatar    string `json:"avatar"`
 }
 
 // StatusHub, kullanıcı durumu işlemlerini yöneten bileşen
@@ -125,18 +128,16 @@ func (sh *StatusHub) getConversationsWithUser(userID string) map[string]bool {
 }
 
 // getAllConversationUsers, tüm sohbetlerdeki kullanıcıları döndürür (yardımcı metod)
-func (sh *StatusHub) getAllConversationUsers() map[uuid.UUID]map[string]bool {
-	result := make(map[uuid.UUID]map[string]bool)
+func (sh *StatusHub) getAllConversationUsers() map[uuid.UUID]map[string]UserInfo {
+	result := make(map[uuid.UUID]map[string]UserInfo)
 
-	// Burada Ana Hub'dan conversationUsers map'ini kopyalamak gerekiyor
-	// Ancak bu örnek için basitleştirmek adına doğrudan erişim kullanılıyor
 	sh.parentHub.mutex.RLock()
 	defer sh.parentHub.mutex.RUnlock()
 
 	for convID, users := range sh.parentHub.conversationUsers {
-		usersCopy := make(map[string]bool, len(users))
-		for userID, val := range users {
-			usersCopy[userID] = val
+		usersCopy := make(map[string]UserInfo, len(users))
+		for userID, info := range users {
+			usersCopy[userID] = info
 		}
 		result[convID] = usersCopy
 	}
@@ -146,80 +147,60 @@ func (sh *StatusHub) getAllConversationUsers() map[uuid.UUID]map[string]bool {
 
 // SendInitialUserStatuses, yeni bağlanan istemciye tüm kullanıcı durumlarını gönderir
 func (sh *StatusHub) SendInitialUserStatuses(client *domain.Client, conversationID uuid.UUID) {
-	// Sohbetteki tüm kullanıcıları al
 	users := sh.parentHub.GetConversationUsers(conversationID)
 	if len(users) == 0 {
 		return
 	}
 
-	// Tüm kullanıcıların durumlarını topla
 	statusUpdates := []UserStatusNotification{}
 
-	for userID := range users {
-		// Kullanıcının durumunu önbellekten al
-		statusVal, exists := sh.userStatuses.Load(userID)
-		var status UserStatusNotification
+	for userID, info := range users {
+		if userID == client.UserID.String() {
+			continue
+		}
 
-		if !exists {
-			// Önbellekte yoksa Redis'ten çek
+		status := UserStatusNotification{
+			UserID:    userID,
+			Username:  info.Username,
+			Avatar:    info.Avatar,
+			Timestamp: time.Now().Unix(),
+			Type:      "user_status",
+		}
+
+		// Kullanıcının durumu
+		statusVal, exists := sh.userStatuses.Load(userID)
+		if exists {
+			status.Status = statusVal.(UserStatusNotification).Status
+		} else {
+			// Redis'ten çek
 			statusStr, err := sh.redisClient.Get(context.Background(), "user:status:"+userID).Result()
 			if err == redis.Nil {
-				// Varsayılan olarak offline
-				status = UserStatusNotification{
-					UserID:    userID,
-					Status:    "offline",
-					Timestamp: time.Now().Unix(),
-					Type:      "user_status",
-				}
+				status.Status = "offline"
 			} else if err != nil {
 				log.Println("Redis get error:", err)
-				status = UserStatusNotification{
-					UserID:    userID,
-					Status:    "unknown",
-					Timestamp: time.Now().Unix(),
-					Type:      "user_status",
-				}
+				status.Status = "unknown"
 			} else {
-				// Redis'ten gelen string'i ayrıştır
 				var redisStatus UserStatusNotification
 				err = json.Unmarshal([]byte(statusStr), &redisStatus)
 				if err != nil {
 					log.Println("Redis status unmarshal error:", err)
-					status = UserStatusNotification{
-						UserID:    userID,
-						Status:    "unknown",
-						Timestamp: time.Now().Unix(),
-						Type:      "user_status",
-					}
+					status.Status = "unknown"
 				} else {
-					status = redisStatus
-					status.Type = "user_status"
+					status.Status = redisStatus.Status
+					sh.userStatuses.Store(userID, status)
 				}
-
-				// Önbelleğe kaydet
-				sh.userStatuses.Store(userID, status)
 			}
-		} else {
-			// Önbellekten al
-			status = statusVal.(UserStatusNotification)
 		}
 
 		statusUpdates = append(statusUpdates, status)
 	}
 
-	// Tüm kullanıcı durumlarını tek bir mesajda gönder
-	if len(statusUpdates) > 0 {
-		client.WriteLock.Lock()
-		err := client.Conn.WriteJSON(map[string]interface{}{
-			"type":           "initial_user_statuses",
-			"status_updates": statusUpdates,
-		})
-		client.WriteLock.Unlock()
-
-		if err != nil {
-			log.Println("Error sending initial statuses:", err)
-		}
-	}
+	// Burada `statusUpdates` client'a gönderilebilir
+	// Örnek:
+	payload, _ := json.Marshal(statusUpdates)
+	client.WriteLock.Lock()
+	_ = client.Conn.WriteMessage(websocket.TextMessage, payload)
+	client.WriteLock.Unlock()
 }
 
 // UpdateUserStatus, bir kullanıcının durumunu günceller ve yayınlar

@@ -369,9 +369,13 @@ func (r *Repository) AreUsersFriends(ctx context.Context, userA, userB uuid.UUID
 	}
 	return count > 0, nil
 }
-func (r *Repository) GetParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error) {
-	// Örnek SQL sorgusu
-	query := `SELECT user_id FROM conversation_participants WHERE conversation_id = $1`
+func (r *Repository) GetParticipants(ctx context.Context, conversationID uuid.UUID) ([]domain.User, error) {
+	query := `
+		SELECT u.id, u.username, u.avatar_url
+		FROM users_cache u
+		JOIN conversation_participants cp ON cp.user_id = u.id
+		WHERE cp.conversation_id = $1
+	`
 
 	rows, err := r.db.QueryContext(ctx, query, conversationID)
 	if err != nil {
@@ -379,13 +383,17 @@ func (r *Repository) GetParticipants(ctx context.Context, conversationID uuid.UU
 	}
 	defer rows.Close()
 
-	var participants []uuid.UUID
+	var participants []domain.User
 	for rows.Next() {
-		var userID uuid.UUID
-		if err := rows.Scan(&userID); err != nil {
+		var user domain.User
+		var avatar sql.NullString
+		if err := rows.Scan(&user.ID, &user.Username, &avatar); err != nil {
 			return nil, err
 		}
-		participants = append(participants, userID)
+		if avatar.Valid {
+			user.Avatar = avatar.String
+		}
+		participants = append(participants, user)
 	}
 
 	return participants, nil

@@ -2,6 +2,7 @@ package ws
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"socialmedia/chat/app/chat/usecase"
@@ -21,6 +22,12 @@ type RemoveUserFromConversationNotification struct {
 	Type           string    `json:"type"` // örnek: "user_removed"
 }
 
+type UserInfo struct {
+	Username string `json:"username"`
+	Avatar   string `json:"avatar"`
+	Active   bool   `json:"aktif"`
+}
+
 // Hub, WebSocket bağlantılarını yöneten ana bileşen
 type Hub struct {
 	// Tüm aktif istemciler - conversationID -> client -> bool
@@ -28,7 +35,7 @@ type Hub struct {
 
 	// Sohbet konuşmalarında hangi kullanıcıların olduğunu takip eder
 	// conversationID -> userID -> bool
-	conversationUsers map[uuid.UUID]map[string]bool
+	conversationUsers map[uuid.UUID]map[string]UserInfo
 
 	// İstemci kayıt/silme kanalları
 	register   chan *domain.Client
@@ -40,7 +47,7 @@ type Hub struct {
 	// Alt bileşenler
 	messageHub  *MessageHub
 	statusHub   *StatusHub
-	userKickHub *UserKickHub
+	userKickHub *ConversationUserManagerHub
 
 	// Eşzamanlılık koruması
 	mutex sync.RWMutex
@@ -54,7 +61,7 @@ type Hub struct {
 func NewHub(redisClient *redis.Client, repo Repository) *Hub {
 	hub := &Hub{
 		clients:           make(map[uuid.UUID]map[*domain.Client]bool),
-		conversationUsers: make(map[uuid.UUID]map[string]bool),
+		conversationUsers: make(map[uuid.UUID]map[string]UserInfo),
 		register:          make(chan *domain.Client),
 		unregister:        make(chan *domain.Client),
 		redisClient:       redisClient,
@@ -64,7 +71,7 @@ func NewHub(redisClient *redis.Client, repo Repository) *Hub {
 	// Alt bileşenleri oluştur
 	hub.messageHub = NewMessageHub(redisClient, hub)
 	hub.statusHub = NewStatusHub(redisClient, hub)
-	hub.userKickHub = NewUserKickHub(redisClient, hub)
+	hub.userKickHub = NewConversationUserManagerHub(redisClient, hub)
 
 	return hub
 }
@@ -100,9 +107,20 @@ func (h *Hub) RegisterClient(client *domain.Client, userID uuid.UUID) {
 
 	// Kullanıcıyı sohbetle ilişkilendir
 	if _, ok := h.conversationUsers[client.ConversationID]; !ok {
-		h.conversationUsers[client.ConversationID] = make(map[string]bool)
+		h.conversationUsers[client.ConversationID] = make(map[string]UserInfo)
 	}
-	h.conversationUsers[client.ConversationID][userID.String()] = true
+
+	existing, ok := h.conversationUsers[client.ConversationID][userID.String()]
+	if ok {
+		h.conversationUsers[client.ConversationID][userID.String()] = existing
+	} else {
+		// Yoksa sadece online true olarak ekle
+		h.conversationUsers[client.ConversationID][userID.String()] = UserInfo{
+			Username: client.Username,
+			Avatar:   client.Avatar,
+			Active:   true,
+		}
+	}
 
 	// Kullanıcıya mevcut durumları gönder
 	go h.statusHub.SendInitialUserStatuses(client, client.ConversationID)
@@ -147,6 +165,7 @@ func (h *Hub) LoadConversationMembers(ctx context.Context, conversationID uuid.U
 	// Sohbet katılımcılarını veritabanından çek
 	participants, err := h.repo.GetParticipants(ctx, conversationID)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -154,12 +173,16 @@ func (h *Hub) LoadConversationMembers(ctx context.Context, conversationID uuid.U
 	defer h.mutex.Unlock()
 
 	if _, ok := h.conversationUsers[conversationID]; !ok {
-		h.conversationUsers[conversationID] = make(map[string]bool)
+		h.conversationUsers[conversationID] = make(map[string]UserInfo)
 	}
 
 	// Tüm katılımcıları kaydet
-	for _, participant := range participants {
-		h.conversationUsers[conversationID][participant.String()] = true
+	for _, p := range participants {
+		h.conversationUsers[conversationID][p.ID.String()] = UserInfo{
+			Username: p.Username,
+			Avatar:   p.Avatar,
+			Active:   false,
+		}
 	}
 
 	return nil
@@ -175,20 +198,20 @@ func (h *Hub) IsConversationLoaded(conversationID uuid.UUID) bool {
 }
 
 // GetConversationUsers, bir sohbetteki kullanıcı kimliklerini döndürür
-func (h *Hub) GetConversationUsers(conversationID uuid.UUID) map[string]bool {
+func (h *Hub) GetConversationUsers(conversationID uuid.UUID) map[string]UserInfo {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 
 	if users, ok := h.conversationUsers[conversationID]; ok {
 		// Kopya oluştur, doğrudan referans değil
-		result := make(map[string]bool, len(users))
-		for userID, val := range users {
-			result[userID] = val
+		result := make(map[string]UserInfo, len(users))
+		for userID, userInfo := range users {
+			result[userID] = userInfo
 		}
 		return result
 	}
 
-	return make(map[string]bool)
+	return make(map[string]UserInfo)
 }
 
 func (h *Hub) IsBlocked(ctx context.Context, blockerID, blockedID uuid.UUID) bool {
@@ -271,6 +294,33 @@ func (h *Hub) RemoveUserFromConversation(ctx context.Context, conversationID uui
 	}
 }
 
+// func (h *Hub) AddUserToConversation(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) {
+// 	var shouldBroadcast bool
+// 	msg := AddUserToConversationNotification{
+// 		ConversationID: conversationID,
+// 		UserID:         userID,
+// 		Type:           "user_added",
+// 	}
+
+// 	h.mutex.Lock()
+// 	defer h.mutex.Unlock()
+
+// 	// Eğer sohbet daha önce yoksa başlat
+// 	if _, exists := h.conversationUsers[conversationID]; !exists {
+// 		h.conversationUsers[conversationID] = make(map[string]bool)
+// 	}
+
+// 	// Kullanıcı eklenmemişse ekle ve yayınla
+// 	if _, exists := h.conversationUsers[conversationID][userID.String()]; !exists {
+// 		h.conversationUsers[conversationID][userID.String()] = true
+// 		log.Printf("User %s added to conversation %s\n", userID, conversationID)
+// 		shouldBroadcast = true
+// 	}
+
+//		if shouldBroadcast {
+//			h.BroadcastToConversation(ctx, conversationID, msg)
+//		}
+//	}
 func (h *Hub) BroadcastToConversation(ctx context.Context, conversationID uuid.UUID, message interface{}) {
 	h.mutex.RLock()
 	clients, ok := h.clients[conversationID]
