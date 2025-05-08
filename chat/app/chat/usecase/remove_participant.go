@@ -42,7 +42,7 @@ func (uc *removeParticipantUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 		ConversationID: conversationID,
 		UserID:         userID,
 	}
-	err = uc.chatRedisRepo.PublishKickUserConversation(ctx, "kick_user_channel", notification)
+	err = uc.chatRedisRepo.PublishKickUserConversation(ctx, "conversation_user_manager", notification)
 	if err != nil {
 		fmt.Printf("Error publishing message to Redis: %v\n", err)
 	}

@@ -331,6 +331,29 @@ func (r *Repository) IsParticipant(ctx context.Context, conversationID, userID u
 	return isParticipant, nil
 }
 
+func (r *Repository) GetUserIfParticipant(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) (*domain.User, error) {
+	query := `SELECT u.id, u.username, u.avatar_url
+              FROM users_cache u
+              JOIN conversation_participants cp ON cp.user_id = u.id
+              WHERE cp.conversation_id = $1 AND u.id = $2`
+
+	var user domain.User
+	var avatar sql.NullString
+	err := r.db.QueryRowContext(ctx, query, conversationID, userID).Scan(&user.ID, &user.Username, &avatar)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // Kullanıcı bu sohbetin parçası değil
+		}
+		return nil, err // Diğer hata durumları
+	}
+	if avatar.Valid {
+		user.Avatar = avatar.String
+	} else {
+		user.Avatar = ""
+	}
+	return &user, nil
+}
+
 func (r *Repository) IsUserPrivate(ctx context.Context, userID uuid.UUID) (bool, error) {
 	query := `SELECT is_private FROM users_cache WHERE id = $1`
 	var isPrivate bool

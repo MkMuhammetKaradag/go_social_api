@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"socialmedia/chat/domain"
 
 	// chatWebsocket "socialmedia/chat/app/chat/websocket"
@@ -26,20 +27,20 @@ func NewChatWebSocketListenUseCase(repository Repository, hub Hub) ChatWebSocket
 
 func (u *chatWebSocketListenUseCase) Execute(c *websocketFiber.Conn, ctx context.Context, userID, conversationID uuid.UUID) {
 	// Kullanıcının sohbetin bir üyesi olup olmadığını kontrol et
-	isMember, err := u.repository.IsParticipant(ctx, conversationID, userID)
+	user, err := u.repository.GetUserIfParticipant(ctx, conversationID, userID)
 
 	if err != nil {
+		fmt.Println(err)
 		message := websocketFiber.FormatCloseMessage(websocketFiber.CloseInternalServerErr, "Server Error")
 		c.Conn.WriteMessage(websocketFiber.CloseMessage, message)
 		c.Conn.Close()
 		return
-	} else if !isMember {
+	} else if user == nil {
 		message := websocketFiber.FormatCloseMessage(websocket.CloseNormalClosure, "Unauthorized access")
 		c.Conn.WriteMessage(websocketFiber.CloseMessage, message)
 		c.Conn.Close()
 		return
 	}
-
 
 	// Conversation üyelerini yükle (eğer daha önce yüklenmemişse)
 	if !u.hub.IsConversationLoaded(conversationID) {
@@ -57,13 +58,14 @@ func (u *chatWebSocketListenUseCase) Execute(c *websocketFiber.Conn, ctx context
 	client := &domain.Client{
 		ConversationID: conversationID,
 		UserID:         userID,
+		Avatar:         user.Avatar,
+		Username:       user.Username,
 		Conn:           conn,
 	}
 
 	// Client'i hub'a kaydet (userID ile birlikte)
 	u.hub.RegisterClient(client, userID)
 
-	
 	defer func() {
 		u.hub.UnregisterClient(client, userID)
 	}()

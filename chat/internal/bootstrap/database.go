@@ -26,6 +26,7 @@ type Repository interface {
 	CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, *[]domain.BlockedParticipant, error)
 	CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, error)
 	IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error)
+	GetUserIfParticipant(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) (*domain.User, error)
 
 	// IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error)
 	GetParticipants(ctx context.Context, conversationID uuid.UUID) ([]domain.User, error)
