@@ -14,6 +14,13 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type RemoveUserFromConversationNotification struct {
+	UserID         uuid.UUID `json:"user_id"`
+	ConversationID uuid.UUID `json:"conversation_id"`
+	Reason         string    `json:"reason,omitempty"`
+	Type           string    `json:"type"` // örnek: "user_removed"
+}
+
 // Hub, WebSocket bağlantılarını yöneten ana bileşen
 type Hub struct {
 	// Tüm aktif istemciler - conversationID -> client -> bool
@@ -167,52 +174,6 @@ func (h *Hub) IsConversationLoaded(conversationID uuid.UUID) bool {
 	return exists
 }
 
-// BroadcastToConversation belirli bir sohbetteki tüm istemcilere mesaj gönderir
-func (h *Hub) BroadcastToConversation(ctx context.Context, conversationID uuid.UUID, message interface{}) {
-	h.mutex.RLock()
-	defer h.mutex.RUnlock()
-
-	// Sohbetteki tüm istemcilere gönder
-	if clients, ok := h.clients[conversationID]; ok {
-		for client := range clients {
-			switch msg := message.(type) {
-
-			case MessageNotification:
-				// Engelleme kontrolü (client mesajı göndereni engellemiş mi?)
-				if h.IsBlocked(ctx, client.UserID, msg.UserID) {
-					continue
-				}
-				// Gönder
-				client.WriteLock.Lock()
-				err := client.Conn.WriteJSON(msg)
-				client.WriteLock.Unlock()
-
-				if err != nil {
-					log.Println("WebSocket write error:", err)
-					client.Conn.Close()
-					delete(clients, client)
-				}
-
-			case UserStatusNotification:
-				// Bu türde engelleme kontrolü yapmana gerek yoksa direkt gönder
-				client.WriteLock.Lock()
-				err := client.Conn.WriteJSON(msg)
-				client.WriteLock.Unlock()
-
-				if err != nil {
-					log.Println("WebSocket write error:", err)
-					client.Conn.Close()
-					delete(clients, client)
-				}
-
-			default:
-				log.Println("Unknown message type")
-				continue
-			}
-		}
-	}
-}
-
 // GetConversationUsers, bir sohbetteki kullanıcı kimliklerini döndürür
 func (h *Hub) GetConversationUsers(conversationID uuid.UUID) map[string]bool {
 	h.mutex.RLock()
@@ -238,33 +199,123 @@ func (h *Hub) IsBlocked(ctx context.Context, blockerID, blockedID uuid.UUID) boo
 	}
 	return exists
 }
-func (h *Hub) KickUserFromConversation(conversationID uuid.UUID, userID uuid.UUID) {
-	h.mutex.Lock()
-	defer h.mutex.Unlock()
 
+func (h *Hub) KickUserFromConversation(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) {
+	h.mutex.Lock()
 	clients, ok := h.clients[conversationID]
 	if !ok {
+		h.mutex.Unlock()
 		return
 	}
 
+	var targetClient *domain.Client
 	for client := range clients {
 		if client.UserID == userID {
-			log.Printf("Kicking user %s from conversation %s\n", userID, conversationID)
-
-			// Bağlantıyı kapat
-			client.Conn.WriteMessage(
-				websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "You have been removed from the conversation by admin."),
-			)
-			client.Conn.Close()
-
-			// Haritadan çıkar
-			delete(clients, client)
+			targetClient = client
+			break
 		}
 	}
+	if targetClient == nil {
+		h.mutex.Unlock()
+		return
+	}
+	h.mutex.Unlock()
 
-	// conversationUsers listesinden de çıkar
+	// Kullanıcıya önce bildirim gönder
+	h.RemoveUserFromConversation(ctx, conversationID, userID)
+
+	// WebSocket bağlantısını düzgün kapat
+	targetClient.WriteLock.Lock()
+	_ = targetClient.Conn.WriteMessage(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "You have been removed from the conversation by admin."),
+	)
+	targetClient.WriteLock.Unlock()
+	targetClient.Conn.Close()
+
+	// Haritadan client'ı sil
+	h.mutex.Lock()
+	delete(h.clients[conversationID], targetClient)
 	if users, exists := h.conversationUsers[conversationID]; exists {
 		delete(users, userID.String())
+	}
+	h.mutex.Unlock()
+}
+
+// RemoveUserFromConversation, belirli bir kullanıcıyı belirtilen sohbetten çıkarır
+
+func (h *Hub) RemoveUserFromConversation(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) {
+	var shouldBroadcast bool
+	msg := RemoveUserFromConversationNotification{
+		ConversationID: conversationID,
+		UserID:         userID,
+		Type:           "user_removed",
+	}
+
+	h.mutex.Lock()
+	if users, exists := h.conversationUsers[conversationID]; exists {
+		if _, ok := users[userID.String()]; ok {
+			delete(users, userID.String())
+			log.Printf("User %s removed from conversation %s\n", userID, conversationID)
+			shouldBroadcast = true
+
+			if len(users) == 0 {
+				delete(h.conversationUsers, conversationID)
+			}
+		}
+	}
+	h.mutex.Unlock()
+
+	if shouldBroadcast {
+		h.BroadcastToConversation(ctx, conversationID, msg)
+	}
+}
+
+func (h *Hub) BroadcastToConversation(ctx context.Context, conversationID uuid.UUID, message interface{}) {
+	h.mutex.RLock()
+	clients, ok := h.clients[conversationID]
+	if !ok {
+		h.mutex.RUnlock()
+		return
+	}
+
+	var clientsToRemove []*domain.Client
+	for client := range clients {
+		var err error
+
+		switch msg := message.(type) {
+		case MessageNotification:
+			if h.IsBlocked(ctx, client.UserID, msg.UserID) {
+				continue
+			}
+			client.WriteLock.Lock()
+			err = client.Conn.WriteJSON(msg)
+			client.WriteLock.Unlock()
+
+		case UserStatusNotification, RemoveUserFromConversationNotification:
+			client.WriteLock.Lock()
+			err = client.Conn.WriteJSON(msg)
+			client.WriteLock.Unlock()
+
+		default:
+			log.Println("Unknown message type")
+			continue
+		}
+
+		if err != nil {
+			log.Println("WebSocket write error:", err)
+			client.Conn.Close()
+			clientsToRemove = append(clientsToRemove, client)
+		}
+	}
+	h.mutex.RUnlock()
+
+	// Silme işlemleri ayrı Lock ile yapılmalı
+	if len(clientsToRemove) > 0 {
+		h.mutex.Lock()
+		for _, client := range clientsToRemove {
+			delete(h.clients[conversationID], client)
+		}
+		h.mutex.Unlock()
 	}
 }

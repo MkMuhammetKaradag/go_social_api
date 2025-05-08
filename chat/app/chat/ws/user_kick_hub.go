@@ -64,7 +64,7 @@ func (sh *UserKickHub) listenForStatusUpdates(ctx context.Context) {
 				log.Println("Status unmarshal error:", err)
 				continue
 			}
-			sh.parentHub.KickUserFromConversation(kickUser.ConversationID, kickUser.UserID)
+			sh.parentHub.KickUserFromConversation(ctx, kickUser.ConversationID, kickUser.UserID)
 
 		}
 	}
