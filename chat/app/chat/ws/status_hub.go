@@ -16,12 +16,16 @@ import (
 
 // UserStatusNotification, kullanıcı durum bildirimlerinin yapısı
 type UserStatusNotification struct {
-	UserID    string `json:"user_id"`
-	Status    string `json:"status"` // "online" veya "offline"
-	Timestamp int64  `json:"timestamp"`
-	Type      string `json:"type"` // Bildirim türü, "user_status" olarak sabit
-	Username  string `json:"username"`
-	Avatar    string `json:"avatar"`
+	UserID    uuid.UUID `json:"user_id"`
+	Status    string    `json:"status"` // "online" veya "offline"
+	Timestamp int64     `json:"timestamp"`
+	Type      string    `json:"type"` // Bildirim türü, "user_status" olarak sabit
+	Username  string    `json:"username"`
+	Avatar    string    `json:"avatar"`
+}
+
+func (u UserStatusNotification) GetUserID() uuid.UUID {
+	return u.UserID
 }
 
 // StatusHub, kullanıcı durumu işlemlerini yöneten bileşen
@@ -101,11 +105,11 @@ func (sh *StatusHub) broadcastStatusToRelevantConversations(ctx context.Context,
 	// parentHub üzerinden tüm sohbetleri tara ve kullanıcının olduğu sohbetleri bul
 	for conversationID, users := range sh.getConversationsWithUser(statusNotif.UserID) {
 		if users {
-			convID, err := uuid.Parse(conversationID)
-			if err != nil {
-				log.Println("Invalid conversation ID:", err)
-				continue
-			}
+			convID := conversationID
+			// if err != nil {
+			// 	log.Println("Invalid conversation ID:", err)
+			// 	continue
+			// }
 
 			// Sohbetteki tüm istemcilere yayınla
 			sh.parentHub.BroadcastToConversation(ctx, convID, statusNotif)
@@ -114,13 +118,13 @@ func (sh *StatusHub) broadcastStatusToRelevantConversations(ctx context.Context,
 }
 
 // getConversationsWithUser, bir kullanıcının bulunduğu tüm sohbetleri döndürür
-func (sh *StatusHub) getConversationsWithUser(userID string) map[string]bool {
-	result := make(map[string]bool)
+func (sh *StatusHub) getConversationsWithUser(userID uuid.UUID) map[uuid.UUID]bool {
+	result := make(map[uuid.UUID]bool)
 
 	// Ana Hub'dan tüm sohbetleri ve kullanıcılarını al
 	for conversationID, users := range sh.getAllConversationUsers() {
 		if _, ok := users[userID]; ok {
-			result[conversationID.String()] = true
+			result[conversationID] = true
 		}
 	}
 
@@ -128,14 +132,14 @@ func (sh *StatusHub) getConversationsWithUser(userID string) map[string]bool {
 }
 
 // getAllConversationUsers, tüm sohbetlerdeki kullanıcıları döndürür (yardımcı metod)
-func (sh *StatusHub) getAllConversationUsers() map[uuid.UUID]map[string]UserInfo {
-	result := make(map[uuid.UUID]map[string]UserInfo)
+func (sh *StatusHub) getAllConversationUsers() map[uuid.UUID]map[uuid.UUID]UserInfo {
+	result := make(map[uuid.UUID]map[uuid.UUID]UserInfo)
 
 	sh.parentHub.mutex.RLock()
 	defer sh.parentHub.mutex.RUnlock()
 
 	for convID, users := range sh.parentHub.conversationUsers {
-		usersCopy := make(map[string]UserInfo, len(users))
+		usersCopy := make(map[uuid.UUID]UserInfo, len(users))
 		for userID, info := range users {
 			usersCopy[userID] = info
 		}
@@ -155,7 +159,7 @@ func (sh *StatusHub) SendInitialUserStatuses(client *domain.Client, conversation
 	statusUpdates := []UserStatusNotification{}
 
 	for userID, info := range users {
-		if userID == client.UserID.String() {
+		if userID == client.UserID {
 			continue
 		}
 
@@ -173,7 +177,7 @@ func (sh *StatusHub) SendInitialUserStatuses(client *domain.Client, conversation
 			status.Status = statusVal.(UserStatusNotification).Status
 		} else {
 			// Redis'ten çek
-			statusStr, err := sh.redisClient.Get(context.Background(), "user:status:"+userID).Result()
+			statusStr, err := sh.redisClient.Get(context.Background(), "user:status:"+userID.String()).Result()
 			if err == redis.Nil {
 				status.Status = "offline"
 			} else if err != nil {
@@ -204,7 +208,7 @@ func (sh *StatusHub) SendInitialUserStatuses(client *domain.Client, conversation
 }
 
 // UpdateUserStatus, bir kullanıcının durumunu günceller ve yayınlar
-func (sh *StatusHub) UpdateUserStatus(ctx context.Context, userID string, status string) error {
+func (sh *StatusHub) UpdateUserStatus(ctx context.Context, userID uuid.UUID, status string) error {
 	// Durum bildirimini oluştur
 	statusNotif := UserStatusNotification{
 		UserID:    userID,
@@ -223,7 +227,7 @@ func (sh *StatusHub) UpdateUserStatus(ctx context.Context, userID string, status
 	}
 
 	// Ayrıca Redis'e kalıcı olarak kaydet
-	err = sh.redisClient.Set(ctx, "user:status:"+userID, string(data), 24*time.Hour).Err()
+	err = sh.redisClient.Set(ctx, "user:status:"+userID.String(), string(data), 24*time.Hour).Err()
 	if err != nil {
 		return err
 	}

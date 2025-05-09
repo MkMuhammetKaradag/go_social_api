@@ -31,12 +31,14 @@ type Message struct {
 	Attachments    []Attachment
 }
 
-type KickUserConservation struct {
-	ConversationID uuid.UUID
-	UserID         uuid.UUID
-
+type ConversationUserManager struct {
+	UserID         uuid.UUID 
+	ConversationID uuid.UUID 
+	Username       string    
+	Avatar         string    
+	Reason         string    
+	Type           string    
 }
-
 
 type BlockedParticipant struct {
 	BlockerID uuid.UUID

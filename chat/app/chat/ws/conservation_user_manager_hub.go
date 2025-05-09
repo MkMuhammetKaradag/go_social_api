@@ -14,6 +14,8 @@ import (
 type ConversationUserManager struct {
 	UserID         uuid.UUID `json:"user_id"`
 	ConversationID uuid.UUID `json:"conversation_id"`
+	Username       string    `json:"username"`
+	Avatar         string    `json:"avatar"`
 	Reason         string    `json:"reason,omitempty"`
 	Type           string    `json:"type"`
 }
@@ -60,14 +62,26 @@ func (sh *ConversationUserManagerHub) conversationUserManager(ctx context.Contex
 			}
 
 			// Durumu işle
-			var kickUser ConversationUserManager
-			err = json.Unmarshal([]byte(msg.Payload), &kickUser)
+			var managerMsg ConversationUserManager
+			err = json.Unmarshal([]byte(msg.Payload), &managerMsg)
 			if err != nil {
 				log.Println("coversation user manager  unmarshal error:", err)
 				continue
 			}
-			sh.parentHub.KickUserFromConversation(ctx, kickUser.ConversationID, kickUser.UserID)
 
+			switch managerMsg.Type {
+			case "remove":
+				sh.parentHub.KickUserFromConversation(ctx, managerMsg.ConversationID, managerMsg.UserID)
+			case "add":
+				user := UserInfo{
+					Username: managerMsg.Username,
+					Avatar:   managerMsg.Avatar,
+					Active:   false,
+				}
+				sh.parentHub.AddUserToConversation(ctx, managerMsg.ConversationID, managerMsg.UserID, user)
+			default:
+				log.Println("Unknown conversation user manager type:", managerMsg.Type)
+			}
 		}
 	}
 }

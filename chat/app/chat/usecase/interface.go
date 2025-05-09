@@ -54,6 +54,7 @@ type Repository interface {
 	RemoveParticipant(ctx context.Context, conversationID, userID, addedByUserID uuid.UUID) error
 	PromoteToAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error
 	DemoteFromAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error
+	GetUserInfoByID(ctx context.Context, userID uuid.UUID) (*domain.User, error)
 }
 
 type RedisRepository interface {
@@ -61,5 +62,5 @@ type RedisRepository interface {
 }
 type ChatRedisRepository interface {
 	PublishChatMessage(ctx context.Context, channelName string, message *domain.Message) error
-	PublishKickUserConversation(ctx context.Context, channelName string, message *domain.KickUserConservation) error
+	PublishKickUserConversation(ctx context.Context, channelName string, message *domain.ConversationUserManager) error
 }

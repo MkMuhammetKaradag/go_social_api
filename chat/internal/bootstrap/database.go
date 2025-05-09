@@ -36,6 +36,7 @@ type Repository interface {
 
 	PromoteToAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error
 	DemoteFromAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error
+	GetUserInfoByID(ctx context.Context, userID uuid.UUID) (*domain.User, error)
 }
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)
@@ -43,7 +44,7 @@ type RedisRepository interface {
 type ChatRedisRepository interface {
 	PublishChatMessage(ctx context.Context, channelName string, message *domain.Message) error
 	GetRedisClient() *redis.Client
-	PublishKickUserConversation(ctx context.Context, channelName string, message *domain.KickUserConservation) error
+	PublishKickUserConversation(ctx context.Context, channelName string, message *domain.ConversationUserManager) error
 }
 type Hub interface {
 	// Run()

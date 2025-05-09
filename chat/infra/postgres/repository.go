@@ -354,6 +354,29 @@ func (r *Repository) GetUserIfParticipant(ctx context.Context, conversationID uu
 	return &user, nil
 }
 
+func (r *Repository) GetUserInfoByID(ctx context.Context, userID uuid.UUID) (*domain.User, error) {
+	query := `SELECT id, username, avatar_url FROM users_cache WHERE id = $1`
+
+	var user domain.User
+	var avatar sql.NullString
+
+	err := r.db.QueryRowContext(ctx, query, userID).Scan(&user.ID, &user.Username, &avatar)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // Kullanıcı bulunamadı
+		}
+		return nil, fmt.Errorf("failed to get user by ID: %w", err)
+	}
+
+	if avatar.Valid {
+		user.Avatar = avatar.String
+	} else {
+		user.Avatar = ""
+	}
+
+	return &user, nil
+}
+
 func (r *Repository) IsUserPrivate(ctx context.Context, userID uuid.UUID) (bool, error) {
 	query := `SELECT is_private FROM users_cache WHERE id = $1`
 	var isPrivate bool

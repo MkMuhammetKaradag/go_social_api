@@ -23,9 +23,13 @@ type MessageNotification struct {
 	HasAttachments bool             `json:"has_attachments"`
 	Attachments    []AttachmentInfo `json:"attachments,omitempty"`
 }
-type KickUserNotification struct {
+type ConversationUserManager struct {
 	ConversationID uuid.UUID `json:"conversation_id"`
 	UserID         uuid.UUID `json:"user_id"`
+	Username       string    `json:"username"`
+	Avatar         string    `json:"avatar"`
+	Reson          string    `json:"reson"`
+	Type           string    `json:"type"`
 }
 type AttachmentInfo struct {
 	ID       uuid.UUID `json:"id"`
@@ -85,12 +89,16 @@ func (r *ChatRedisRepository) PublishChatMessage(ctx context.Context, channelNam
 func (r *ChatRedisRepository) GetRedisClient() *redis.Client {
 	return r.client
 }
-func (r *ChatRedisRepository) PublishKickUserConversation(ctx context.Context, channelName string, message *domain.KickUserConservation) error {
+func (r *ChatRedisRepository) PublishKickUserConversation(ctx context.Context, channelName string, message *domain.ConversationUserManager) error {
 
 	// Bildirim nesnesini oluştur
-	notification := KickUserNotification{
+	notification := ConversationUserManager{
 		ConversationID: message.ConversationID,
 		UserID:         message.UserID,
+		Avatar:         message.Avatar,
+		Username:       message.Username,
+		Reson:          message.Reason,
+		Type:           message.Type,
 	}
 
 	// JSON'a dönüştür

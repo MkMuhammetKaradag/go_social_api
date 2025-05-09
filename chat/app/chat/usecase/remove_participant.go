@@ -38,9 +38,11 @@ func (uc *removeParticipantUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Conte
 	if err != nil {
 		return err
 	}
-	notification := &domain.KickUserConservation{
+	notification := &domain.ConversationUserManager{
 		ConversationID: conversationID,
 		UserID:         userID,
+		Reason:         "user removed from conversation",
+		Type:           "remove",
 	}
 	err = uc.chatRedisRepo.PublishKickUserConversation(ctx, "conversation_user_manager", notification)
 	if err != nil {
