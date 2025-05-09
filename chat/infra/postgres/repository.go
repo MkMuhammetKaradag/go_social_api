@@ -237,21 +237,21 @@ func (r *Repository) AddParticipant(ctx context.Context, conversationID, userID,
 	return nil
 }
 
-func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, error) {
+func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, *domain.User, error) {
 	// First, check if the sender is a participant in the conversation
-	isParticipant, err := r.IsParticipant(ctx, conversationID, senderID)
+	isParticipant, err := r.GetUserIfParticipant(ctx, conversationID, senderID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check participant status: %w", err)
+		return nil, nil,fmt.Errorf("failed to check participant status: %w", err)
 	}
 
-	if !isParticipant {
-		return nil, fmt.Errorf("user is not a participant in this conversation")
+	if isParticipant == nil {
+		return nil, nil,fmt.Errorf("user is not a participant in this conversation")
 	}
 
 	// Begin transaction
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return nil,nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -270,7 +270,7 @@ func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID
 	err = tx.QueryRowContext(ctx, query, conversationID, senderID, content).
 		Scan(&msg.ID, &msg.CreatedAt, &msg.IsEdited, &msg.DeletedAt)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create message: %w", err)
+		return nil, nil,fmt.Errorf("failed to create message: %w", err)
 	}
 
 	// Add attachments if provided
@@ -291,7 +291,7 @@ func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID
 			err = tx.QueryRowContext(ctx, attachQuery, msg.ID, fileURL, fileType).
 				Scan(&attachmentID)
 			if err != nil {
-				return nil, fmt.Errorf("failed to add attachment: %w", err)
+				return nil, nil,fmt.Errorf("failed to add attachment: %w", err)
 			}
 
 			attachment := domain.Attachment{
@@ -307,15 +307,15 @@ func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID
 
 	// Commit transaction
 	if err = tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		return nil, nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return &msg, nil
+	return &msg, isParticipant, nil
 }
 func (r *Repository) DeleteMessage(ctx context.Context, messageID, currentUserID uuid.UUID) (uuid.UUID, error) {
 	// Tek bir transaction içinde tüm işi yap
 	var conversationID uuid.UUID
-	
+
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("transaction başlatılamadı: %w", err)
@@ -326,15 +326,14 @@ func (r *Repository) DeleteMessage(ctx context.Context, messageID, currentUserID
 			tx.Rollback() // Rollback hatasını görmezden geliyoruz çünkü zaten başka bir hata dönüyoruz
 		}
 	}()
-	
-	
+
 	query := `
 		UPDATE messages
 		SET deleted_at = NOW()
 		WHERE id = $1 AND sender_id = $2 AND deleted_at IS NULL
 		RETURNING conversation_id
 	`
-	
+
 	err = tx.QueryRowContext(ctx, query, messageID, currentUserID).Scan(&conversationID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -342,12 +341,12 @@ func (r *Repository) DeleteMessage(ctx context.Context, messageID, currentUserID
 		}
 		return uuid.Nil, fmt.Errorf("mesaj silinemedi: %w", err)
 	}
-	
+
 	// Başarılı olduğunda commit yap
 	if err = tx.Commit(); err != nil {
 		return uuid.Nil, fmt.Errorf("transaction commit edilemedi: %w", err)
 	}
-	
+
 	return conversationID, nil
 }
 

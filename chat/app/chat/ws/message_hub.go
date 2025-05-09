@@ -3,6 +3,7 @@ package ws
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/google/uuid"
@@ -11,14 +12,17 @@ import (
 
 // MessageNotification, mesaj bildirimlerinin yapısı
 type MessageNotification struct {
+	Type           string           `json:"type"` // "add", "delete"
 	MessageID      uuid.UUID        `json:"message_id"`
 	ConversationID uuid.UUID        `json:"conversation_id"`
 	UserID         uuid.UUID        `json:"user_id"`
-	Content        string           `json:"content"`
-	CreatedAt      string           `json:"created_at"`
+	Username       string           `json:"username,omitempty"`
+	Avatar         string           `json:"avatar,omitempty"`
+	Content        string           `json:"content,omitempty"`
+	CreatedAt      string           `json:"created_at,omitempty"`
 	HasAttachments bool             `json:"has_attachments"`
+	DeletedAt      string           `json:"deleted_at,omitempty"`
 	Attachments    []AttachmentInfo `json:"attachments,omitempty"`
-	Type           string           `json:"type"` // Mesaj tipi, "message" olarak sabit
 }
 
 // AttachmentInfo, mesaj eklerinin yapısı
@@ -75,9 +79,9 @@ func (mh *MessageHub) listenForMessages(ctx context.Context, channelName string)
 				log.Println("Message unmarshal error:", err)
 				continue
 			}
-
+			fmt.Println(notification)
 			// Mesaj tipini belirt
-			notification.Type = "message"
+			// notification.Type = "message"
 
 			// İlgili sohbetteki tüm istemcilere gönder
 			mh.parentHub.BroadcastToConversation(ctx, notification.ConversationID, notification)

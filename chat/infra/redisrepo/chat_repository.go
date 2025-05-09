@@ -14,15 +14,15 @@ type ChatRedisRepository struct {
 	client *redis.Client
 }
 
-type MessageNotification struct {
-	MessageID      uuid.UUID        `json:"message_id"`
-	ConversationID uuid.UUID        `json:"conversation_id"`
-	UserID         uuid.UUID        `json:"user_id"`
-	Content        string           `json:"content"`
-	CreatedAt      string           `json:"created_at"`
-	HasAttachments bool             `json:"has_attachments"`
-	Attachments    []AttachmentInfo `json:"attachments,omitempty"`
-}
+//	type MessageNotification struct {
+//		MessageID      uuid.UUID        `json:"message_id"`
+//		ConversationID uuid.UUID        `json:"conversation_id"`
+//		UserID         uuid.UUID        `json:"user_id"`
+//		Content        string           `json:"content"`
+//		CreatedAt      string           `json:"created_at"`
+//		HasAttachments bool             `json:"has_attachments"`
+//		Attachments    []AttachmentInfo `json:"attachments,omitempty"`
+//	}
 type ConversationUserManager struct {
 	ConversationID uuid.UUID `json:"conversation_id"`
 	UserID         uuid.UUID `json:"user_id"`
@@ -30,11 +30,6 @@ type ConversationUserManager struct {
 	Avatar         string    `json:"avatar"`
 	Reson          string    `json:"reson"`
 	Type           string    `json:"type"`
-}
-type AttachmentInfo struct {
-	ID       uuid.UUID `json:"id"`
-	FileURL  string    `json:"file_url"`
-	FileType string    `json:"file_type"`
 }
 
 func NewChatRedisRepository(connString, password string, db int) (*ChatRedisRepository, error) {
@@ -51,27 +46,7 @@ func NewChatRedisRepository(connString, password string, db int) (*ChatRedisRepo
 	return &ChatRedisRepository{client: RedisClient}, nil
 }
 
-func (r *ChatRedisRepository) PublishChatMessage(ctx context.Context, channelName string, message *domain.Message) error {
-
-	attachments := []AttachmentInfo{}
-	for _, attachment := range message.Attachments {
-		attachments = append(attachments, AttachmentInfo{
-			ID:       attachment.ID,
-			FileURL:  attachment.FileURL,
-			FileType: attachment.FileType,
-		})
-	}
-
-	// Bildirim nesnesini oluştur
-	notification := MessageNotification{
-		MessageID:      message.ID,
-		ConversationID: message.ConversationID,
-		UserID:         message.UserID,
-		Content:        message.Content,
-		CreatedAt:      message.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		HasAttachments: len(message.Attachments) > 0,
-		Attachments:    attachments,
-	}
+func (r *ChatRedisRepository) PublishChatMessage(ctx context.Context, channelName string, notification *domain.MessageNotification) error {
 
 	// JSON'a dönüştür
 	notificationJson, err := json.Marshal(notification)

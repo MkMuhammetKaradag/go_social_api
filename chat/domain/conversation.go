@@ -30,14 +30,31 @@ type Message struct {
 	DeletedAt      *time.Time
 	Attachments    []Attachment
 }
-
+type AttachmentInfo struct {
+	ID       uuid.UUID `json:"id"`
+	FileURL  string    `json:"file_url"`
+	FileType string    `json:"file_type"`
+}
+type MessageNotification struct {
+	Type           string           `json:"type"` // "add", "delete"
+	MessageID      uuid.UUID        `json:"message_id"`
+	ConversationID uuid.UUID        `json:"conversation_id"`
+	UserID         uuid.UUID        `json:"user_id"`
+	Username       string           `json:"username,omitempty"`
+	Avatar         string           `json:"avatar,omitempty"`
+	Content        string           `json:"content,omitempty"`
+	CreatedAt      string           `json:"created_at,omitempty"`
+	HasAttachments bool             `json:"has_attachments"`
+	DeletedAt      string           `json:"deleted_at,omitempty"`
+	Attachments    []AttachmentInfo `json:"attachments,omitempty"`
+}
 type ConversationUserManager struct {
-	UserID         uuid.UUID 
-	ConversationID uuid.UUID 
-	Username       string    
-	Avatar         string    
-	Reason         string    
-	Type           string    
+	UserID         uuid.UUID
+	ConversationID uuid.UUID
+	Username       string
+	Avatar         string
+	Reason         string
+	Type           string
 }
 
 type BlockedParticipant struct {

@@ -48,7 +48,7 @@ type RabbitMQ interface {
 
 type Repository interface {
 	CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, *[]domain.BlockedParticipant, error)
-	CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, error)
+	CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, *domain.User, error)
 	IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error)
 	GetUserIfParticipant(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) (*domain.User, error)
 	// GetParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error)
@@ -66,6 +66,6 @@ type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)
 }
 type ChatRedisRepository interface {
-	PublishChatMessage(ctx context.Context, channelName string, message *domain.Message) error
+	PublishChatMessage(ctx context.Context, channelName string, message *domain.MessageNotification) error
 	PublishKickUserConversation(ctx context.Context, channelName string, message *domain.ConversationUserManager) error
 }

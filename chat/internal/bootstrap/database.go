@@ -24,7 +24,8 @@ type Repository interface {
 	UpdateUser(ctx context.Context, userID uuid.UUID, userName, avatarURL *string, isPrivate *bool) error
 
 	CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, *[]domain.BlockedParticipant, error)
-	CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, error)
+	CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, *domain.User, error)
+
 	IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error)
 	GetUserIfParticipant(ctx context.Context, conversationID uuid.UUID, userID uuid.UUID) (*domain.User, error)
 
@@ -44,7 +45,7 @@ type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)
 }
 type ChatRedisRepository interface {
-	PublishChatMessage(ctx context.Context, channelName string, message *domain.Message) error
+	PublishChatMessage(ctx context.Context, channelName string, message *domain.MessageNotification) error
 	GetRedisClient() *redis.Client
 	PublishKickUserConversation(ctx context.Context, channelName string, message *domain.ConversationUserManager) error
 }
