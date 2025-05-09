@@ -31,6 +31,10 @@ type PromoteToAdminUseCase interface {
 type DemoteFromAdminUseCase interface {
 	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, conversationID, userID uuid.UUID) error
 }
+
+type DeleteMessageUseCase interface {
+	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, messageID uuid.UUID) error
+}
 type Hub interface {
 	RegisterClient(client *domain.Client, userID uuid.UUID)
 	UnregisterClient(client *domain.Client, userID uuid.UUID)
@@ -55,6 +59,7 @@ type Repository interface {
 	PromoteToAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error
 	DemoteFromAdmin(ctx context.Context, conversationID, targetUserID, currentUserID uuid.UUID) error
 	GetUserInfoByID(ctx context.Context, userID uuid.UUID) (*domain.User, error)
+	DeleteMessage(ctx context.Context, messageID, currentUserID uuid.UUID) (uuid.UUID, error)
 }
 
 type RedisRepository interface {

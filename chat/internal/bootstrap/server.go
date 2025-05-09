@@ -35,6 +35,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 	removeParticipantHandler := httpHandlers["removeparticipant"].(*chat.RemoveParticipantHandler)
 	promoteToAdminHandler := httpHandlers["promotetoadmin"].(*chat.PromoteToAdminHandler)
 	demoteFromAdminHandler := httpHandlers["demotefromadmin"].(*chat.DemoteFromAdminHandler)
+	deleteMessageHandler := httpHandlers["deletemessage"].(*chat.DeleteMessageHandler)
 
 	// Korumalı rotalar
 
@@ -47,6 +48,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 		protected.Delete("/conservation/:conservation_id/remove-participant", handler.HandleWithFiber[chat.RemoveParticipantRequest, chat.RemoveParticipantResponse](removeParticipantHandler))
 		protected.Post("/conservation/:conservation_id/promote-to-admin", handler.HandleWithFiber[chat.PromoteToAdminRequest, chat.PromoteToAdminResponse](promoteToAdminHandler))
 		protected.Post("/conservation/:conservation_id/demote-from-admin", handler.HandleWithFiber[chat.DemoteFromAdminRequest, chat.DemoteFromAdminResponse](demoteFromAdminHandler))
+		protected.Delete("/messages/:message_id", handler.HandleWithFiber[chat.DeleteMessageRequest, chat.DeleteMessageResponse](deleteMessageHandler))
 
 		wsRoute := app.Group("/ws")
 		wsRoute.Get("/message/:chatID", handler.HandleWithFiberWS[chat.ChatWebSocketListenRequest](chatListenHandler))

@@ -312,6 +312,44 @@ func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID
 
 	return &msg, nil
 }
+func (r *Repository) DeleteMessage(ctx context.Context, messageID, currentUserID uuid.UUID) (uuid.UUID, error) {
+	// Tek bir transaction içinde tüm işi yap
+	var conversationID uuid.UUID
+	
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("transaction başlatılamadı: %w", err)
+	}
+	defer func() {
+		// err nil değilse rollback yap, aksi takdirde zaten commit yapılmış olacak
+		if err != nil {
+			tx.Rollback() // Rollback hatasını görmezden geliyoruz çünkü zaten başka bir hata dönüyoruz
+		}
+	}()
+	
+	
+	query := `
+		UPDATE messages
+		SET deleted_at = NOW()
+		WHERE id = $1 AND sender_id = $2 AND deleted_at IS NULL
+		RETURNING conversation_id
+	`
+	
+	err = tx.QueryRowContext(ctx, query, messageID, currentUserID).Scan(&conversationID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return uuid.Nil, fmt.Errorf("mesaj bulunamadı veya kullanıcıya ait değil")
+		}
+		return uuid.Nil, fmt.Errorf("mesaj silinemedi: %w", err)
+	}
+	
+	// Başarılı olduğunda commit yap
+	if err = tx.Commit(); err != nil {
+		return uuid.Nil, fmt.Errorf("transaction commit edilemedi: %w", err)
+	}
+	
+	return conversationID, nil
+}
 
 // Helper function to check if a user is a participant in a conversation
 func (r *Repository) IsParticipant(ctx context.Context, conversationID, userID uuid.UUID) (bool, error) {
