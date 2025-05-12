@@ -37,8 +37,34 @@ func NewRepository(connString, dbName string) (*Repository, error) {
 		client:   client,
 		database: database,
 	}
-
+	repo.StartNotificationCleanupTask(12*time.Hour, 48*time.Hour)
 	return repo, nil
+}
+
+func (r *Repository) SoftDeleteOldNotifications(ctx context.Context, olderThan time.Duration) error {
+	collection := r.GetCollection("notifications")
+
+	cutoff := time.Now().Add(-olderThan)
+
+	filter := bson.M{
+		"createdAt": bson.M{"$lt": cutoff},
+		"deletedAt": bson.M{"$exists": false},
+	}
+
+	now := time.Now()
+	update := bson.M{
+		"$set": bson.M{
+			"deletedAt": now,
+		},
+	}
+
+	result, err := collection.UpdateMany(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to soft delete old notifications: %w", err)
+	}
+
+	log.Printf("Soft deleted %d old notifications", result.ModifiedCount)
+	return nil
 }
 
 // Koleksiyon adını dinamik olarak alabilen fonksiyon

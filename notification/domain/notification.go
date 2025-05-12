@@ -16,5 +16,6 @@ type Notification struct {
 	GroupName  string    `bson:"groupName"`
 	Url        string    `bson:"url"`
 	CreatedAt  time.Time `bson:"createdAt"`
+	DeletedAt  time.Time `bson:"deletedAt"`
 	UpdatedAt  time.Time `bson:"updatedAt"`
 }
