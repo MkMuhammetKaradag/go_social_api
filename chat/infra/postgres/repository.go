@@ -342,6 +342,31 @@ func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID
 
 	return &msg, isParticipant, nil
 }
+func (r *Repository) UpdateMessageContent(ctx context.Context, messageID, senderID uuid.UUID, newContent string) error {
+	query := `
+		UPDATE messages
+		SET content = $1,
+		    is_edited = true
+		WHERE id = $2
+		  AND sender_id = $3
+	`
+
+	res, err := r.db.ExecContext(ctx, query, newContent, messageID, senderID)
+	if err != nil {
+		return fmt.Errorf("failed to update message content: %w", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("message not found or user is not the sender")
+	}
+
+	return nil
+}
 func (r *Repository) DeleteMessage(ctx context.Context, messageID, currentUserID uuid.UUID) (uuid.UUID, error) {
 	// Tek bir transaction içinde tüm işi yap
 	var conversationID uuid.UUID

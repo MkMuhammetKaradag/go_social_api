@@ -38,6 +38,9 @@ type DeleteMessageUseCase interface {
 type RenameConversationUseCase interface {
 	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, conversationID uuid.UUID, conversationName string) error
 }
+type EditMessageContentUseCase interface {
+	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, messageID uuid.UUID, content string) error
+}
 type Hub interface {
 	RegisterClient(client *domain.Client, userID uuid.UUID)
 	UnregisterClient(client *domain.Client, userID uuid.UUID)
@@ -64,6 +67,7 @@ type Repository interface {
 	GetUserInfoByID(ctx context.Context, userID uuid.UUID) (*domain.User, error)
 	DeleteMessage(ctx context.Context, messageID, currentUserID uuid.UUID) (uuid.UUID, error)
 	UpdateConversationName(ctx context.Context, conversationID, userID uuid.UUID, newName string) error
+	UpdateMessageContent(ctx context.Context, messageID, senderID uuid.UUID, newContent string) error
 }
 
 type RedisRepository interface {
