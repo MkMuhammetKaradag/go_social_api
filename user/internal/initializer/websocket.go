@@ -1,7 +1,7 @@
 package initializer
 
 import (
-	"socialmedia/user/infra/websocket"
+	websocket "socialmedia/user/app/user/ws"
 )
 
 func InitWebsocket(redisRepo UserRedisRepository) *websocket.Hub {
