@@ -13,7 +13,7 @@ type AddParticipantHandler struct {
 }
 
 type AddParticipantRequest struct {
-	ConversationID uuid.UUID `params:"conservation_id"`
+	ConversationID uuid.UUID `params:"conversation_id"`
 	UserID         uuid.UUID `json:"user_id"`
 }
 

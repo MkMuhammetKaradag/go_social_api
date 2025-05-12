@@ -36,6 +36,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 	promoteToAdminHandler := httpHandlers["promotetoadmin"].(*chat.PromoteToAdminHandler)
 	demoteFromAdminHandler := httpHandlers["demotefromadmin"].(*chat.DemoteFromAdminHandler)
 	deleteMessageHandler := httpHandlers["deletemessage"].(*chat.DeleteMessageHandler)
+	renameConversationHandler := httpHandlers["renameconversation"].(*chat.RenameConversationHandler)
 
 	// Korumalı rotalar
 
@@ -44,10 +45,11 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 	{
 		protected.Post("/createconversation", handler.HandleWithFiber[chat.CreateConversationRequest, chat.CreateConversationResponse](createConversationHandler))
 		protected.Post("/createmessage", handler.HandleWithFiber[chat.CreateMessageRequest, chat.CreateMessageResponse](createMessageHandler))
-		protected.Post("/conservation/:conservation_id/add-participant", handler.HandleWithFiber[chat.AddParticipantRequest, chat.AddParticipantResponse](addParticipantHandler))
-		protected.Delete("/conservation/:conservation_id/remove-participant", handler.HandleWithFiber[chat.RemoveParticipantRequest, chat.RemoveParticipantResponse](removeParticipantHandler))
-		protected.Post("/conservation/:conservation_id/promote-to-admin", handler.HandleWithFiber[chat.PromoteToAdminRequest, chat.PromoteToAdminResponse](promoteToAdminHandler))
-		protected.Post("/conservation/:conservation_id/demote-from-admin", handler.HandleWithFiber[chat.DemoteFromAdminRequest, chat.DemoteFromAdminResponse](demoteFromAdminHandler))
+		protected.Patch("/conversation/:conversation_id/rename", handler.HandleWithFiber[chat.RenameConversationRequest, chat.RenameConversationResponse](renameConversationHandler))
+		protected.Post("/conversation/:conversation_id/add-participant", handler.HandleWithFiber[chat.AddParticipantRequest, chat.AddParticipantResponse](addParticipantHandler))
+		protected.Delete("/conversation/:conversation_id/remove-participant", handler.HandleWithFiber[chat.RemoveParticipantRequest, chat.RemoveParticipantResponse](removeParticipantHandler))
+		protected.Post("/conversation/:conversation_id/promote-to-admin", handler.HandleWithFiber[chat.PromoteToAdminRequest, chat.PromoteToAdminResponse](promoteToAdminHandler))
+		protected.Post("/conversation/:conversation_id/demote-from-admin", handler.HandleWithFiber[chat.DemoteFromAdminRequest, chat.DemoteFromAdminResponse](demoteFromAdminHandler))
 		protected.Delete("/messages/:message_id", handler.HandleWithFiber[chat.DeleteMessageRequest, chat.DeleteMessageResponse](deleteMessageHandler))
 
 		wsRoute := app.Group("/ws")

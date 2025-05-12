@@ -47,6 +47,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 	promoteToAdminUseCase := chatUseCase.NewPromoteToAdminUseCase(repo)
 	demoteFromAdminUseCase := chatUseCase.NewDemoteFromAdminUseCase(repo)
 	deleteMessageUseCase := chatUseCase.NewDeleteMessageUseCase(repo, chatRedisRepo)
+	renameConversationUseCase := chatUseCase.NewRenameConversationUseCase(repo)
 
 	createConversationHandler := chat.NewCreateConversationHandler(createConversationUseCase)
 	createMessageHandler := chat.NewCreateMessageHandler(createMessageUseCase)
@@ -55,6 +56,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 	promoteToAdminHandler := chat.NewPromoteToAdminHandler(promoteToAdminUseCase)
 	demoteFromAdminHandler := chat.NewDemoteFromAdminHandler(demoteFromAdminUseCase)
 	deleteMessageHandler := chat.NewDeleteMessageHandler(deleteMessageUseCase)
+	renameConversationHandler := chat.NewRenameConversationHandler(renameConversationUseCase)
 
 	return map[string]interface{}{
 
@@ -65,6 +67,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 		"promotetoadmin":     promoteToAdminHandler,
 		"demotefromadmin":    demoteFromAdminHandler,
 		"deletemessage":      deleteMessageHandler,
+		"renameconversation": renameConversationHandler,
 	}
 }
 func SetupWSHandlers(repo Repository, chatRedisRepo ChatRedisRepository, wsHub Hub) map[string]interface{} {

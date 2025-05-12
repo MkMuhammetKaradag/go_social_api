@@ -163,6 +163,36 @@ func (r *Repository) CreateConversation(ctx context.Context, currentUserID uuid.
 	return &convo, &blockedParticipants, nil
 }
 
+func (r *Repository) UpdateConversationName(ctx context.Context, conversationID, userID uuid.UUID, newName string) error {
+	isAdderAdmin, err := r.IsUserAdmin(ctx, conversationID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to check admin rights: %w", err)
+	}
+	if !isAdderAdmin {
+		return fmt.Errorf("user %s is not an admin of conversation %s", userID, conversationID)
+	}
+	query := `
+		UPDATE conversations
+		SET name = $1
+		WHERE id = $2`
+
+	res, err := r.db.ExecContext(ctx, query, newName, conversationID)
+	if err != nil {
+		return fmt.Errorf("failed to update conversation name: %w", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("conversation not found")
+	}
+
+	return nil
+}
+
 func (r *Repository) GetBlockedParticipantsForUser(ctx context.Context, conversationID, userID uuid.UUID) ([]uuid.UUID, error) {
 	query := `
         SELECT b.blocked_id
@@ -241,17 +271,17 @@ func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID
 	// First, check if the sender is a participant in the conversation
 	isParticipant, err := r.GetUserIfParticipant(ctx, conversationID, senderID)
 	if err != nil {
-		return nil, nil,fmt.Errorf("failed to check participant status: %w", err)
+		return nil, nil, fmt.Errorf("failed to check participant status: %w", err)
 	}
 
 	if isParticipant == nil {
-		return nil, nil,fmt.Errorf("user is not a participant in this conversation")
+		return nil, nil, fmt.Errorf("user is not a participant in this conversation")
 	}
 
 	// Begin transaction
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil,nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return nil, nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -270,7 +300,7 @@ func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID
 	err = tx.QueryRowContext(ctx, query, conversationID, senderID, content).
 		Scan(&msg.ID, &msg.CreatedAt, &msg.IsEdited, &msg.DeletedAt)
 	if err != nil {
-		return nil, nil,fmt.Errorf("failed to create message: %w", err)
+		return nil, nil, fmt.Errorf("failed to create message: %w", err)
 	}
 
 	// Add attachments if provided
@@ -291,7 +321,7 @@ func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID
 			err = tx.QueryRowContext(ctx, attachQuery, msg.ID, fileURL, fileType).
 				Scan(&attachmentID)
 			if err != nil {
-				return nil, nil,fmt.Errorf("failed to add attachment: %w", err)
+				return nil, nil, fmt.Errorf("failed to add attachment: %w", err)
 			}
 
 			attachment := domain.Attachment{
