@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"socialmedia/chat/domain"
 	"socialmedia/shared/middlewares"
 
@@ -10,12 +11,14 @@ import (
 )
 
 type editMessageContentUseCase struct {
-	repository Repository
+	repository    Repository
+	chatRedisRepo ChatRedisRepository
 }
 
-func NewEditMessageContentUseCase(repository Repository) EditMessageContentUseCase {
+func NewEditMessageContentUseCase(repository Repository, chatRedisRepo ChatRedisRepository) EditMessageContentUseCase {
 	return &editMessageContentUseCase{
-		repository: repository,
+		repository:    repository,
+		chatRedisRepo: chatRedisRepo,
 	}
 }
 
@@ -28,9 +31,24 @@ func (uc *editMessageContentUseCase) Execute(fbrCtx *fiber.Ctx, ctx context.Cont
 	if err != nil {
 		return err
 	}
-	err = uc.repository.UpdateMessageContent(ctx, messageID, currentUserID, content)
+	conversationID, err := uc.repository.UpdateMessageContent(ctx, messageID, currentUserID, content)
 	if err != nil {
 		return err
+	}
+
+	
+	notification := &domain.MessageNotification{
+		Type:           "message_edit",
+		MessageID:      messageID,
+		ConversationID: conversationID,
+		UserID:         currentUserID,
+		Content:        content,
+	}
+
+
+	err = uc.chatRedisRepo.PublishChatMessage(ctx, "messages", notification)
+	if err != nil {
+		fmt.Printf("Error publishing message to Redis: %v\n", err)
 	}
 	return nil
 }

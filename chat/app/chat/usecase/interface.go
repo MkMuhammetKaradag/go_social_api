@@ -67,7 +67,7 @@ type Repository interface {
 	GetUserInfoByID(ctx context.Context, userID uuid.UUID) (*domain.User, error)
 	DeleteMessage(ctx context.Context, messageID, currentUserID uuid.UUID) (uuid.UUID, error)
 	UpdateConversationName(ctx context.Context, conversationID, userID uuid.UUID, newName string) error
-	UpdateMessageContent(ctx context.Context, messageID, senderID uuid.UUID, newContent string) error
+	UpdateMessageContent(ctx context.Context, messageID, senderID uuid.UUID, newContent string) (uuid.UUID, error)
 }
 
 type RedisRepository interface {

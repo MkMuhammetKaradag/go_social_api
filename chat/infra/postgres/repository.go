@@ -342,30 +342,49 @@ func (r *Repository) CreateMessage(ctx context.Context, conversationID, senderID
 
 	return &msg, isParticipant, nil
 }
-func (r *Repository) UpdateMessageContent(ctx context.Context, messageID, senderID uuid.UUID, newContent string) error {
+func (r *Repository) UpdateMessageContent(ctx context.Context, messageID, senderID uuid.UUID, newContent string) (uuid.UUID, error) {
+	var conversationID uuid.UUID
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("transaction başlatılamadı: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
 	query := `
 		UPDATE messages
 		SET content = $1,
 		    is_edited = true
 		WHERE id = $2
 		  AND sender_id = $3
+		RETURNING conversation_id
 	`
 
-	res, err := r.db.ExecContext(ctx, query, newContent, messageID, senderID)
+	err = tx.QueryRowContext(ctx, query, newContent, messageID, senderID).Scan(&conversationID)
 	if err != nil {
-		return fmt.Errorf("failed to update message content: %w", err)
+		if err == sql.ErrNoRows {
+			return uuid.Nil, fmt.Errorf("message not found or user is not the sender")
+		}
+		return uuid.Nil, fmt.Errorf("mesaj silinemedi: %w", err)
+	}
+	// Başarılı olduğunda commit yap
+	if err = tx.Commit(); err != nil {
+		return uuid.Nil, fmt.Errorf("transaction commit error: %w", err)
 	}
 
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check affected rows: %w", err)
-	}
+	// res, err := r.db.ExecContext(ctx, query, newContent, messageID, senderID)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to update message content: %w", err)
+	// }
 
-	if rowsAffected == 0 {
-		return fmt.Errorf("message not found or user is not the sender")
-	}
+	// rowsAffected, err := res.RowsAffected()
+	// if err != nil {
+	// 	return fmt.Errorf("failed to check affected rows: %w", err)
+	// }
 
-	return nil
+	return conversationID, nil
 }
 func (r *Repository) DeleteMessage(ctx context.Context, messageID, currentUserID uuid.UUID) (uuid.UUID, error) {
 	// Tek bir transaction içinde tüm işi yap

@@ -48,7 +48,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 	demoteFromAdminUseCase := chatUseCase.NewDemoteFromAdminUseCase(repo)
 	deleteMessageUseCase := chatUseCase.NewDeleteMessageUseCase(repo, chatRedisRepo)
 	renameConversationUseCase := chatUseCase.NewRenameConversationUseCase(repo)
-	editMessageContentUseCase := chatUseCase.NewEditMessageContentUseCase(repo)
+	editMessageContentUseCase := chatUseCase.NewEditMessageContentUseCase(repo, chatRedisRepo)
 
 	createConversationHandler := chat.NewCreateConversationHandler(createConversationUseCase)
 	createMessageHandler := chat.NewCreateMessageHandler(createMessageUseCase)

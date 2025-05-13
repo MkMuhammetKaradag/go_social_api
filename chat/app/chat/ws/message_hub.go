@@ -79,7 +79,7 @@ func (mh *MessageHub) listenForMessages(ctx context.Context, channelName string)
 				log.Println("Message unmarshal error:", err)
 				continue
 			}
-			fmt.Println(notification)
+			fmt.Println("message notification:", notification)
 			// Mesaj tipini belirt
 			// notification.Type = "message"
 
