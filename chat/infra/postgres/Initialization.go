@@ -70,6 +70,15 @@ CREATE TABLE IF NOT EXISTS attachments (
   file_type TEXT,
   FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
 )`
+	messagesReadTable = `
+  CREATE TABLE IF NOT EXISTS message_reads (
+  message_id UUID NOT NULL,
+  user_id UUID NOT NULL,
+  read_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (message_id, user_id),
+  FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+)
+`
 )
 
 func initDB(db *sql.DB) error {
@@ -95,6 +104,9 @@ func initDB(db *sql.DB) error {
 
 	if _, err := db.Exec(attachmentTable); err != nil {
 		return fmt.Errorf("failed to create fallow_requests table: %w", err)
+	}
+	if _, err := db.Exec(messagesReadTable); err != nil {
+		return fmt.Errorf("failed to create message_reads table: %w", err)
 	}
 	log.Println("Database tables initialized")
 	return nil
