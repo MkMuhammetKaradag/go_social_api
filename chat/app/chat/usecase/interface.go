@@ -45,6 +45,9 @@ type EditMessageContentUseCase interface {
 type MarkMessagesAsReadUseCase interface {
 	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, messageIDs []uuid.UUID) error
 }
+type MarkConversationMessagesAsReadUseCase interface {
+	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, conversationID uuid.UUID) error
+}
 type Hub interface {
 	RegisterClient(client *domain.Client, userID uuid.UUID)
 	UnregisterClient(client *domain.Client, userID uuid.UUID)
@@ -73,6 +76,7 @@ type Repository interface {
 	UpdateConversationName(ctx context.Context, conversationID, userID uuid.UUID, newName string) error
 	UpdateMessageContent(ctx context.Context, messageID, senderID uuid.UUID, newContent string) (uuid.UUID, error)
 	MarkMessagesAsRead(ctx context.Context, messageIDs []uuid.UUID, userID uuid.UUID) error
+	MarkConversationMessagesAsRead(ctx context.Context, conversationID, userID uuid.UUID) error
 }
 
 type RedisRepository interface {

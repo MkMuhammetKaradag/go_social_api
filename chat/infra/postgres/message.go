@@ -62,3 +62,41 @@ func (r *Repository) MarkMessagesAsRead(ctx context.Context, messageIDs []uuid.U
 
 	return tx.Commit()
 }
+
+func (r *Repository) MarkConversationMessagesAsRead(ctx context.Context, conversationID, userID uuid.UUID) error {
+	// Kullanıcının sohbetin katılımcısı olup olmadığını kontrol et
+	checkParticipantStmt := `
+		SELECT EXISTS (
+			SELECT 1 FROM conversation_participants
+			WHERE conversation_id = $1 AND user_id = $2
+		)
+	`
+
+	var isParticipant bool
+	err := r.db.QueryRowContext(ctx, checkParticipantStmt, conversationID, userID).Scan(&isParticipant)
+	if err != nil {
+		return fmt.Errorf("failed to check if user is a participant: %w", err)
+	}
+	if !isParticipant {
+		return fmt.Errorf("user is not a participant in this conversation")
+	}
+
+	// Mesajları okundu olarak işaretleme
+	query := `
+		INSERT INTO message_reads (message_id, user_id)
+		SELECT m.id, $2
+		FROM messages m
+		LEFT JOIN message_reads mr
+		  ON m.id = mr.message_id AND mr.user_id = $2
+		WHERE m.conversation_id = $1
+		  AND mr.message_id IS NULL
+		  AND m.sender_id != $2
+	`
+
+	_, err = r.db.ExecContext(ctx, query, conversationID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to mark conversation messages as read: %w", err)
+	}
+
+	return nil
+}

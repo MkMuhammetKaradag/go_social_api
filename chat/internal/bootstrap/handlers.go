@@ -50,6 +50,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 	renameConversationUseCase := chatUseCase.NewRenameConversationUseCase(repo)
 	editMessageContentUseCase := chatUseCase.NewEditMessageContentUseCase(repo, chatRedisRepo)
 	markMessagesAsReadUseCase := chatUseCase.NewMarkMessagesAsReadUseCase(repo)
+	markConversationMessagesAsReadUseCase := chatUseCase.NewMarkConversationMessagesAsReadUseCase(repo)
 
 	createConversationHandler := chat.NewCreateConversationHandler(createConversationUseCase)
 	createMessageHandler := chat.NewCreateMessageHandler(createMessageUseCase)
@@ -61,19 +62,21 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 	renameConversationHandler := chat.NewRenameConversationHandler(renameConversationUseCase)
 	editMessageContentHandler := chat.NewEditMessageContentHandler(editMessageContentUseCase)
 	markMessagesAsReadHandler := chat.NewMarkMessagesAsReadHandler(markMessagesAsReadUseCase)
+	markConversationMessagesAsReadHandler := chat.NewMarkConversationMessagesAsReadHandler(markConversationMessagesAsReadUseCase)
 
 	return map[string]interface{}{
 
-		"createconversation": createConversationHandler,
-		"createmessage":      createMessageHandler,
-		"addparticipant":     addParticipantHandler,
-		"removeparticipant":  removeParticipantHandler,
-		"promotetoadmin":     promoteToAdminHandler,
-		"demotefromadmin":    demoteFromAdminHandler,
-		"deletemessage":      deleteMessageHandler,
-		"renameconversation": renameConversationHandler,
-		"editmessagecontent": editMessageContentHandler,
-		"markmessagesasread": markMessagesAsReadHandler,
+		"createconversation":             createConversationHandler,
+		"createmessage":                  createMessageHandler,
+		"addparticipant":                 addParticipantHandler,
+		"removeparticipant":              removeParticipantHandler,
+		"promotetoadmin":                 promoteToAdminHandler,
+		"demotefromadmin":                demoteFromAdminHandler,
+		"deletemessage":                  deleteMessageHandler,
+		"renameconversation":             renameConversationHandler,
+		"editmessagecontent":             editMessageContentHandler,
+		"markmessagesasread":             markMessagesAsReadHandler,
+		"markconversationmessagesasread": markConversationMessagesAsReadHandler,
 	}
 }
 func SetupWSHandlers(repo Repository, chatRedisRepo ChatRedisRepository, wsHub Hub) map[string]interface{} {

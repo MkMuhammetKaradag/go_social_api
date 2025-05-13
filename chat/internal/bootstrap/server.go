@@ -39,6 +39,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 	renameConversationHandler := httpHandlers["renameconversation"].(*chat.RenameConversationHandler)
 	editMessageContentHandler := httpHandlers["editmessagecontent"].(*chat.EditMessageContentHandler)
 	markMessagesAsReadHandler := httpHandlers["markmessagesasread"].(*chat.MarkMessagesAsReadHandler)
+	markConversationMessagesAsReadHandler := httpHandlers["markconversationmessagesasread"].(*chat.MarkConversationMessagesAsReadHandler)
 
 	// Korumalı rotalar
 
@@ -51,6 +52,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 		protectedConversation.Delete("/:conversation_id/remove-participant", handler.HandleWithFiber[chat.RemoveParticipantRequest, chat.RemoveParticipantResponse](removeParticipantHandler))
 		protectedConversation.Post("/:conversation_id/promote-to-admin", handler.HandleWithFiber[chat.PromoteToAdminRequest, chat.PromoteToAdminResponse](promoteToAdminHandler))
 		protectedConversation.Post("/:conversation_id/demote-from-admin", handler.HandleWithFiber[chat.DemoteFromAdminRequest, chat.DemoteFromAdminResponse](demoteFromAdminHandler))
+		protectedConversation.Post("/:conversation_id/read", handler.HandleWithFiber[chat.MarkConversationMessagesAsReadRequest, chat.MarkConversationMessagesAsReadResponse](markConversationMessagesAsReadHandler))
 
 	}
 	protectedMessage := app.Group("/messages", authMiddleware.Authenticate())
