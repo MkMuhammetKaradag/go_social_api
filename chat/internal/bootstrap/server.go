@@ -38,6 +38,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 	deleteMessageHandler := httpHandlers["deletemessage"].(*chat.DeleteMessageHandler)
 	renameConversationHandler := httpHandlers["renameconversation"].(*chat.RenameConversationHandler)
 	editMessageContentHandler := httpHandlers["editmessagecontent"].(*chat.EditMessageContentHandler)
+	markMessagesAsReadHandler := httpHandlers["markmessagesasread"].(*chat.MarkMessagesAsReadHandler)
 
 	// Korumalı rotalar
 
@@ -57,6 +58,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 		protectedMessage.Post("/", handler.HandleWithFiber[chat.CreateMessageRequest, chat.CreateMessageResponse](createMessageHandler))
 		protectedMessage.Delete("/:message_id", handler.HandleWithFiber[chat.DeleteMessageRequest, chat.DeleteMessageResponse](deleteMessageHandler))
 		protectedMessage.Patch("/:message_id/edit-message-content", handler.HandleWithFiber[chat.EditMessageContentRequest, chat.EditMessageContentResponse](editMessageContentHandler))
+		protectedMessage.Post("/read", handler.HandleWithFiber[chat.MarkMessagesAsReadRequest, chat.MarkMessagesAsReadResponse](markMessagesAsReadHandler))
 
 	}
 	wsRoute := app.Group("/ws")

@@ -6,6 +6,7 @@
 *.out
 *.env
 *cache.txt
+*.txt
 
 # Dependency directories (modules or vendor)
 /vendor/
