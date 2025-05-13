@@ -14,8 +14,15 @@ func (r *Repository) MarkMessagesAsRead(ctx context.Context, messageIDs []uuid.U
 	}
 	defer tx.Rollback()
 
-	checkSenderStmt := `
-		SELECT sender_id FROM messages WHERE id = $1
+	getMessageInfoStmt := `
+		SELECT sender_id, conversation_id FROM messages WHERE id = $1
+	`
+
+	checkParticipantStmt := `
+		SELECT EXISTS (
+			SELECT 1 FROM conversation_participants
+			WHERE conversation_id = $1 AND user_id = $2
+		)
 	`
 
 	insertStmt := `
@@ -25,16 +32,29 @@ func (r *Repository) MarkMessagesAsRead(ctx context.Context, messageIDs []uuid.U
 	`
 
 	for _, msgID := range messageIDs {
-		var senderID uuid.UUID
-		err := tx.QueryRowContext(ctx, checkSenderStmt, msgID).Scan(&senderID)
+		var senderID, conversationID uuid.UUID
+
+		err := tx.QueryRowContext(ctx, getMessageInfoStmt, msgID).Scan(&senderID, &conversationID)
 		if err != nil {
-			return fmt.Errorf("failed to fetch sender for message %s: %w", msgID, err)
+			return fmt.Errorf("failed to fetch message info for message %s: %w", msgID, err)
 		}
 
+		// Kendi mesajını okundu olarak işaretleme
 		if senderID == userID {
 			continue
 		}
 
+		// Kullanıcı bu sohbetin katılımcısı mı?
+		var isParticipant bool
+		err = tx.QueryRowContext(ctx, checkParticipantStmt, conversationID, userID).Scan(&isParticipant)
+		if err != nil {
+			return fmt.Errorf("failed to check participant for message %s: %w", msgID, err)
+		}
+		if !isParticipant {
+			continue // yetkisi olmayan mesajı geç
+		}
+
+		// Okundu olarak işaretle
 		if _, err := tx.ExecContext(ctx, insertStmt, msgID, userID); err != nil {
 			return fmt.Errorf("failed to mark message %s as read: %w", msgID, err)
 		}
@@ -42,4 +62,3 @@ func (r *Repository) MarkMessagesAsRead(ctx context.Context, messageIDs []uuid.U
 
 	return tx.Commit()
 }
-
