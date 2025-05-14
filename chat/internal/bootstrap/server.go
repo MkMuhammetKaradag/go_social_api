@@ -40,6 +40,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 	editMessageContentHandler := httpHandlers["editmessagecontent"].(*chat.EditMessageContentHandler)
 	markMessagesAsReadHandler := httpHandlers["markmessagesasread"].(*chat.MarkMessagesAsReadHandler)
 	markConversationMessagesAsReadHandler := httpHandlers["markconversationmessagesasread"].(*chat.MarkConversationMessagesAsReadHandler)
+	getMessagesHandler := httpHandlers["getmessages"].(*chat.GetMessagesHandler)
 
 	// Korumalı rotalar
 
@@ -58,6 +59,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 	protectedMessage := app.Group("/messages", authMiddleware.Authenticate())
 	{
 		protectedMessage.Post("/", handler.HandleWithFiber[chat.CreateMessageRequest, chat.CreateMessageResponse](createMessageHandler))
+		protectedMessage.Get("/:conversation_id", handler.HandleWithFiber[chat.GetMessagesRequest, chat.GetMessagesResponse](getMessagesHandler))
 		protectedMessage.Delete("/:message_id", handler.HandleWithFiber[chat.DeleteMessageRequest, chat.DeleteMessageResponse](deleteMessageHandler))
 		protectedMessage.Patch("/:message_id/edit-message-content", handler.HandleWithFiber[chat.EditMessageContentRequest, chat.EditMessageContentResponse](editMessageContentHandler))
 		protectedMessage.Post("/read", handler.HandleWithFiber[chat.MarkMessagesAsReadRequest, chat.MarkMessagesAsReadResponse](markMessagesAsReadHandler))

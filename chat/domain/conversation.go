@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,10 +25,13 @@ type Message struct {
 	ID             uuid.UUID
 	ConversationID uuid.UUID
 	UserID         uuid.UUID
+	SenderUsername string `db:"username"`
+	SenderAvatar   sql.NullString `db:"avatar_url"`
 	Content        string
 	CreatedAt      time.Time
 	IsEdited       bool
-	DeletedAt      *time.Time
+	DeletedAt      sql.NullTime `db:"deleted_at"`
+	ReadAt         sql.NullTime `db:"read_at"`
 	Attachments    []Attachment
 }
 type AttachmentInfo struct {

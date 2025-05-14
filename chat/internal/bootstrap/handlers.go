@@ -51,6 +51,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 	editMessageContentUseCase := chatUseCase.NewEditMessageContentUseCase(repo, chatRedisRepo)
 	markMessagesAsReadUseCase := chatUseCase.NewMarkMessagesAsReadUseCase(repo)
 	markConversationMessagesAsReadUseCase := chatUseCase.NewMarkConversationMessagesAsReadUseCase(repo)
+	getMessagesUseCase := chatUseCase.NewGetMessagesUseCase(repo)
 
 	createConversationHandler := chat.NewCreateConversationHandler(createConversationUseCase)
 	createMessageHandler := chat.NewCreateMessageHandler(createMessageUseCase)
@@ -63,6 +64,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 	editMessageContentHandler := chat.NewEditMessageContentHandler(editMessageContentUseCase)
 	markMessagesAsReadHandler := chat.NewMarkMessagesAsReadHandler(markMessagesAsReadUseCase)
 	markConversationMessagesAsReadHandler := chat.NewMarkConversationMessagesAsReadHandler(markConversationMessagesAsReadUseCase)
+	getMessagesHandler := chat.NewGetMessagesHandler(getMessagesUseCase)
 
 	return map[string]interface{}{
 
@@ -77,6 +79,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 		"editmessagecontent":             editMessageContentHandler,
 		"markmessagesasread":             markMessagesAsReadHandler,
 		"markconversationmessagesasread": markConversationMessagesAsReadHandler,
+		"getmessages":                    getMessagesHandler,
 	}
 }
 func SetupWSHandlers(repo Repository, chatRedisRepo ChatRedisRepository, wsHub Hub) map[string]interface{} {

@@ -44,6 +44,7 @@ type Repository interface {
 	UpdateMessageContent(ctx context.Context, messageID, senderID uuid.UUID, newContent string) (uuid.UUID, error)
 	MarkMessagesAsRead(ctx context.Context, messageIDs []uuid.UUID, userID uuid.UUID) error
 	MarkConversationMessagesAsRead(ctx context.Context, conversationID, userID uuid.UUID) error
+	GetMessagesForConversation(ctx context.Context, conversationID, userID uuid.UUID, skip, limit int64) ([]domain.Message, error)
 }
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)
