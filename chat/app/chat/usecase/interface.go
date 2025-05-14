@@ -51,6 +51,9 @@ type MarkConversationMessagesAsReadUseCase interface {
 type GetMessagesUseCase interface {
 	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, conversationID uuid.UUID, limit, skip int64) ([]domain.Message, error)
 }
+type GetMessageReadersUseCase interface {
+	Execute(cfbrCtx *fiber.Ctx, ctx context.Context, messageID uuid.UUID) ([]domain.User, error)
+}
 type Hub interface {
 	RegisterClient(client *domain.Client, userID uuid.UUID)
 	UnregisterClient(client *domain.Client, userID uuid.UUID)
@@ -81,6 +84,7 @@ type Repository interface {
 	MarkMessagesAsRead(ctx context.Context, messageIDs []uuid.UUID, userID uuid.UUID) error
 	MarkConversationMessagesAsRead(ctx context.Context, conversationID, userID uuid.UUID) error
 	GetMessagesForConversation(ctx context.Context, conversationID, userID uuid.UUID, skip, limit int64) ([]domain.Message, error)
+	GetMessageReaders(ctx context.Context, messageID, currentUserID uuid.UUID) ([]domain.User, error)
 }
 
 type RedisRepository interface {

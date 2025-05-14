@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"socialmedia/chat/domain"
 
@@ -195,4 +196,40 @@ ORDER BY m.created_at DESC, a.id
 	}
 
 	return messages, nil
+}
+func (r *Repository) GetMessageReaders(ctx context.Context, messageID, currentUserID uuid.UUID) ([]domain.User, error) {
+	query := `
+		SELECT u.id, u.username, u.avatar_url
+		FROM message_reads mr
+		JOIN users_cache u ON u.id = mr.user_id
+		WHERE mr.message_id = $1
+		  AND EXISTS (
+		    SELECT 1 FROM messages m
+		    WHERE m.id = $1 AND m.sender_id = $2
+		  )
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, messageID, currentUserID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query message readers: %w", err)
+	}
+	defer rows.Close()
+
+	var readers []domain.User
+
+	for rows.Next() {
+		var user domain.User
+		var avatar sql.NullString
+		if err := rows.Scan(&user.ID, &user.Username, &avatar); err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		if avatar.Valid {
+			user.Avatar = avatar.String
+		} else {
+			user.Avatar = ""
+		}
+		readers = append(readers, user)
+	}
+
+	return readers, nil
 }
