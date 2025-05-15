@@ -46,6 +46,7 @@ type Repository interface {
 	MarkConversationMessagesAsRead(ctx context.Context, conversationID, userID uuid.UUID) error
 	GetMessagesForConversation(ctx context.Context, conversationID, userID uuid.UUID, skip, limit int64) ([]domain.Message, error)
 	GetMessageReaders(ctx context.Context, messageID, currentUserID uuid.UUID) ([]domain.User, error)
+	DeleteAllMessagesFromConversation(ctx context.Context, conversationID, currentUserID uuid.UUID) error
 }
 type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)

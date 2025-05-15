@@ -42,6 +42,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 	markConversationMessagesAsReadHandler := httpHandlers["markconversationmessagesasread"].(*chat.MarkConversationMessagesAsReadHandler)
 	getMessagesHandler := httpHandlers["getmessages"].(*chat.GetMessagesHandler)
 	getMessageReadersHandler := httpHandlers["getmessagereaders"].(*chat.GetMessageReadersHandler)
+	deleteAllMessagesFromConversationHandler := httpHandlers["deleteallmessagesfromconversation"].(*chat.DeleteAllMessagesFromConversationHandler)
 
 	// Korumalı rotalar
 
@@ -52,6 +53,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 		protectedConversation.Patch("/:conversation_id/rename", handler.HandleWithFiber[chat.RenameConversationRequest, chat.RenameConversationResponse](renameConversationHandler))
 		protectedConversation.Post("/:conversation_id/add-participant", handler.HandleWithFiber[chat.AddParticipantRequest, chat.AddParticipantResponse](addParticipantHandler))
 		protectedConversation.Delete("/:conversation_id/remove-participant", handler.HandleWithFiber[chat.RemoveParticipantRequest, chat.RemoveParticipantResponse](removeParticipantHandler))
+		protectedConversation.Delete("/:conversation_id/messages", handler.HandleWithFiber[chat.DeleteAllMessagesFromConversationRequest, chat.DeleteAllMessagesFromConversationResponse](deleteAllMessagesFromConversationHandler))
 		protectedConversation.Post("/:conversation_id/promote-to-admin", handler.HandleWithFiber[chat.PromoteToAdminRequest, chat.PromoteToAdminResponse](promoteToAdminHandler))
 		protectedConversation.Post("/:conversation_id/demote-from-admin", handler.HandleWithFiber[chat.DemoteFromAdminRequest, chat.DemoteFromAdminResponse](demoteFromAdminHandler))
 		protectedConversation.Post("/:conversation_id/read", handler.HandleWithFiber[chat.MarkConversationMessagesAsReadRequest, chat.MarkConversationMessagesAsReadResponse](markConversationMessagesAsReadHandler))
