@@ -39,7 +39,7 @@ func SetupMessageHandlers(repo Repository, redisRepo RedisRepository) map[messag
 	}
 }
 
-func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo ChatRedisRepository, rabbitMQ Messaging) map[string]interface{} {
+func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo ChatRedisRepository, rabbitMQ Messaging, userClient UserClient) map[string]interface{} {
 	createConversationUseCase := chatUseCase.NewCreateConversationUseCase(repo, rabbitMQ)
 	createMessageUseCase := chatUseCase.NewCreateMessageUseCase(repo, chatRedisRepo)
 	addParticipantUseCase := chatUseCase.NewAddParticipantUseCase(repo, chatRedisRepo)
@@ -53,7 +53,7 @@ func SetupHTTPHandlers(repo Repository, redisRepo RedisRepository, chatRedisRepo
 	markConversationMessagesAsReadUseCase := chatUseCase.NewMarkConversationMessagesAsReadUseCase(repo)
 	getMessagesUseCase := chatUseCase.NewGetMessagesUseCase(repo)
 	getMessageReaderssUseCase := chatUseCase.NewGetMessageReadersUseCase(repo)
-	deleteAllMessagesFromConversationUseCase := chatUseCase.NewDeleteAllMessagesFromConversationUseCase(repo, chatRedisRepo)
+	deleteAllMessagesFromConversationUseCase := chatUseCase.NewDeleteAllMessagesFromConversationUseCase(repo, chatRedisRepo,userClient)
 
 	createConversationHandler := chat.NewCreateConversationHandler(createConversationUseCase)
 	createMessageHandler := chat.NewCreateMessageHandler(createMessageUseCase)

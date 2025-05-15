@@ -14,6 +14,7 @@ import (
 type App struct {
 	config          config.Config
 	repo            Repository
+	userClient      UserClient
 	myWS            Hub
 	redisRepo       RedisRepository
 	chatRedisRepo   ChatRedisRepository
@@ -39,6 +40,7 @@ func (a *App) initDependencies() {
 	// Database ve Redis başlat
 	a.repo = InitDatabase(a.config)
 	a.redisRepo = InitRedis(a.config)
+	a.userClient = InitUserClient(a.config)
 	a.chatRedisRepo = InitChatRedis(a.config)
 	redisClient := a.chatRedisRepo.GetRedisClient()
 	ctx := context.Background()
@@ -53,7 +55,7 @@ func (a *App) initDependencies() {
 	a.rabbitMQ = SetupMessaging(a.messageHandlers, a.config)
 
 	// HTTP handler'larını hazırla
-	a.httpHandlers = SetupHTTPHandlers(a.repo, a.redisRepo, a.chatRedisRepo, a.rabbitMQ)
+	a.httpHandlers = SetupHTTPHandlers(a.repo, a.redisRepo, a.chatRedisRepo, a.rabbitMQ,a.userClient)
 	a.wsHandlers = SetupWSHandlers(a.repo, a.chatRedisRepo, a.myWS)
 
 	// HTTP sunucusu kurulumu

@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"socialmedia/shared/messaging"
+	grpcserver "socialmedia/user/internal/grpc"
 	"socialmedia/user/pkg/config"
 	"socialmedia/user/pkg/graceful"
 	"time"
@@ -21,21 +22,24 @@ type App struct {
 	messageHandlers map[messaging.MessageType]MessageHandler
 	httpHandlers    map[string]interface{}
 	wsHandlers      map[string]interface{}
+	grpcSrv         *grpcserver.Server
 }
 
 func NewApp(config config.Config) *App {
+	grpcSrv := grpcserver.NewGRPCServer()
 	app := &App{
 		config: config,
 	}
 
 	// Bağımlılıkları başlat
-	app.initDependencies()
+	app.initDependencies(grpcSrv)
 
 	return app
 }
 
-func (a *App) initDependencies() {
+func (a *App) initDependencies(grpcSrv *grpcserver.Server) {
 	// Database ve Redis başlat
+	a.grpcSrv = grpcSrv
 	a.repo = InitDatabase(a.config)
 	a.redisRepo = InitRedis(a.config)
 
@@ -55,10 +59,8 @@ func (a *App) initDependencies() {
 
 	a.wsHandlers = SetupWSHandlers(a.repo, a.userRedisRepo, a.myWS)
 
-
 	// HTTP sunucusu kurulumu
-	a.fiberApp = SetupServer(a.config, a.httpHandlers,a.wsHandlers, a.repo, a.redisRepo, a.rabbitMQ)
-
+	a.fiberApp = SetupServer(a.config, a.httpHandlers, a.wsHandlers, a.repo, a.redisRepo, a.rabbitMQ)
 
 }
 
@@ -73,7 +75,7 @@ func (a *App) Start() {
 			zap.L().Error("Failed to start server", zap.Error(err))
 		}
 	}()
-
+	go a.grpcSrv.Start(":" + a.config.Server.Port)
 	zap.L().Info("Server started on port", zap.String("port", a.config.Server.Port))
 
 	// Graceful shutdown için bekle

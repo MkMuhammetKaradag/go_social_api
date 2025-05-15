@@ -1,11 +1,14 @@
 package main
 
 import (
+
 	"socialmedia/user/internal/bootstrap"
 	"socialmedia/user/pkg/config"
+	
 
 	"go.uber.org/zap"
 )
+
 
 func main() {
 	appConfig := config.Read()
@@ -15,5 +18,3 @@ func main() {
 	app := bootstrap.NewApp(appConfig)
 	app.Start()
 }
-
-

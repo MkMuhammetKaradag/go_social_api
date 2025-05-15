@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package userpb;
+
+option go_package = "user/proto/userpb";
+
+import "google/protobuf/wrappers.proto";
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  string id = 1;
+  string username = 2;
+  google.protobuf.StringValue avatar_url = 3;  // nullable string
+}

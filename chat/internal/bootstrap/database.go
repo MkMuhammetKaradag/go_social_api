@@ -6,13 +6,25 @@ import (
 	"socialmedia/chat/domain"
 	"socialmedia/chat/internal/initializer"
 	"socialmedia/chat/pkg/config"
-
-	// wsRepository "socialmedia/chat/infra/websocket"
+	"socialmedia/chat/proto/userpb"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	// "google.golang.org/protobuf/runtime/protoimpl"
+	// "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
+//	type GetUserResponse struct {
+//	    state         protoimpl.MessageState  `protogen:"open.v1"`
+//	    Id            string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+//	    Username      string                  `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+//	    AvatarUrl     *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"` // nullable string
+//	    unknownFields protoimpl.UnknownFields
+//	    sizeCache     protoimpl.SizeCache
+//	}
+type UserClient interface {
+	GetUserByID(ctx context.Context, userID string) (*userpb.GetUserResponse, error)
+}
 type Repository interface {
 	CreateFollow(ctx context.Context, followerID, followingID uuid.UUID, status string) error
 	DeleteFollow(ctx context.Context, followerID, followingID uuid.UUID) error
@@ -84,4 +96,7 @@ func InitChatRedis(config config.Config) ChatRedisRepository {
 }
 func InitWebsocket(ctx context.Context, redisClient *redis.Client, repo Repository) Hub {
 	return initializer.InitWebsocket(ctx, redisClient, repo)
+}
+func InitUserClient(config config.Config) UserClient {
+	return initializer.InitUserClient(config)
 }

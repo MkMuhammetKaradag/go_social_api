@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"socialmedia/chat/domain"
 	"socialmedia/shared/middlewares"
 
@@ -12,12 +13,14 @@ import (
 type deleteAllMessagesFromConversationUseCase struct {
 	repository    Repository
 	chatRedisRepo ChatRedisRepository
+	userClient    UserClient
 }
 
-func NewDeleteAllMessagesFromConversationUseCase(repository Repository, chatRedisRepo ChatRedisRepository) DeleteAllMessagesFromConversationUseCase {
+func NewDeleteAllMessagesFromConversationUseCase(repository Repository, chatRedisRepo ChatRedisRepository, userClient UserClient) DeleteAllMessagesFromConversationUseCase {
 	return &deleteAllMessagesFromConversationUseCase{
 		repository:    repository,
 		chatRedisRepo: chatRedisRepo,
+		userClient:    userClient,
 	}
 
 }
@@ -37,6 +40,13 @@ func (uc *deleteAllMessagesFromConversationUseCase) Execute(fbrCtx *fiber.Ctx, c
 	if err != nil {
 		return err
 	}
+
+	a, err := uc.userClient.GetUserByID(ctx, "helloid")
+
+	if err != nil {
+		fmt.Println("grpc error client usecase in ", err)
+	}
+	fmt.Println("grpc response :", a)
 
 	return nil
 }

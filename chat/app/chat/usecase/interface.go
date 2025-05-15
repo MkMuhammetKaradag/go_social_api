@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"socialmedia/chat/domain"
+	"socialmedia/chat/proto/userpb"
 	"socialmedia/shared/messaging"
 
 	websocketFiber "github.com/gofiber/contrib/websocket"
@@ -68,7 +69,9 @@ type Hub interface {
 type RabbitMQ interface {
 	PublishMessage(ctx context.Context, msg messaging.Message) error
 }
-
+type UserClient interface {
+    GetUserByID(ctx context.Context, userID string) (*userpb.GetUserResponse, error)
+}
 type Repository interface {
 	CreateConversation(ctx context.Context, currrentUserID uuid.UUID, isGroup bool, name string, userIDs []uuid.UUID) (*domain.Conversation, *[]domain.BlockedParticipant, error)
 	CreateMessage(ctx context.Context, conversationID, senderID uuid.UUID, content string, attachmentURLs []string, attachmentTypes []string) (*domain.Message, *domain.User, error)
