@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 )
 
 type Repository interface {
@@ -24,6 +25,9 @@ type RedisRepository interface {
 	DeleteSession(ctx context.Context, key string, userID string) error
 	DeleteAllUserSessions(ctx context.Context, userId string) error
 }
+type UserRedisRepository interface {
+	PublishUserLogout(ctx context.Context, userID uuid.UUID)
+}
 
 type JwtHelper interface {
 	SignToken(payload jwt.MapClaims, expiration time.Duration) (string, error)
@@ -37,7 +41,9 @@ func InitDatabase(config config.Config) Repository {
 func InitRedis(config config.Config) RedisRepository {
 	return initializer.InitRedis(config)
 }
-
+func InitUserRedis(config config.Config) UserRedisRepository {
+	return initializer.InitUserRedis(config)
+}
 func InitJwtHelper(config config.Config) JwtHelper {
 	return initializer.InitJwtHelper(config)
 }

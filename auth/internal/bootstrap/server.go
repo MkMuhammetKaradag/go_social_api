@@ -44,8 +44,10 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 	{
 
 		logoutAuthHandler := httpHandlers["logout"].(*auth.LogoutAuthHandler)
+		allLogoutAuthHandler := httpHandlers["alllogout"].(*auth.AllLogoutAuthHandler)
 
 		protected.Post("/logout", handler.HandleWithFiber[auth.LogoutAuthRequest, auth.LogoutAuthResponse](logoutAuthHandler))
+		protected.Post("/all-logout", handler.HandleWithFiber[auth.AllLogoutAuthRequest, auth.AllLogoutAuthResponse](allLogoutAuthHandler))
 	}
 
 	return app

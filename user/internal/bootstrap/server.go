@@ -22,10 +22,6 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 
 	app := server.NewFiberApp(serverConfig)
 
-	// HTTP handler'ları al
-	// httpHandlers := SetupHTTPHandlers( repo, redisRepo, rabbitMQ) // Repo parametresi gerekiyorsa düzeltin
-
-	// Root endpoint
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
@@ -42,10 +38,10 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, wsHa
 		updateBannerHandler := httpHandlers["banner"].(*user.UpdateBannerHandler)
 
 		protected.Get("/profile", handler.HandleWithFiber[user.ProfileUserRequest, user.ProfileUserResponse](profileHandler))
-		protected.Post("/update", handler.HandleWithFiber[user.UpdateUserRequest, user.UpdateUserResponse](updateHandler))
+		protected.Patch("/update", handler.HandleWithFiber[user.UpdateUserRequest, user.UpdateUserResponse](updateHandler))
 		protected.Get("/searchusers", handler.HandleWithFiber[user.SearchUserRequest, user.SearchUserResponse](searchUsersHandler))
-		protected.Post("/avatar", handler.HandleWithFiber[user.UpdateAvatarRequest, user.UpdateAvatarResponse](updateAvatarHandler))
-		protected.Post("/banner", handler.HandleWithFiber[user.UpdateBannerRequest, user.UpdateBannerResponse](updateBannerHandler))
+		protected.Patch("/avatar", handler.HandleWithFiber[user.UpdateAvatarRequest, user.UpdateAvatarResponse](updateAvatarHandler))
+		protected.Patch("/banner", handler.HandleWithFiber[user.UpdateBannerRequest, user.UpdateBannerResponse](updateBannerHandler))
 		protected.Get("/:id", handler.HandleWithFiber[user.GetUserRequest, user.GetUserResponse](getUserHandler))
 
 		wsRoute := app.Group("/ws")

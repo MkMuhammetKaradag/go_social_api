@@ -10,12 +10,13 @@ func SetupMessageHandlers(repo Repository, redisRepo RedisRepository) map[messag
 	return map[messaging.MessageType]MessageHandler{}
 }
 
-func SetupHTTPHandlers(jwtHelper JwtHelper, repo Repository, redisRepo RedisRepository, rabbitMQ Messaging) map[string]interface{} {
+func SetupHTTPHandlers(jwtHelper JwtHelper, repo Repository, redisRepo RedisRepository, userRedisRepo UserRedisRepository, rabbitMQ Messaging) map[string]interface{} {
 	signUpUseCase := usecase.NewSignUpUseCase(repo, rabbitMQ, jwtHelper)
 	forgotPasswordUseCase := usecase.NewForgotPasswordUseCase(repo, rabbitMQ)
 	activateUseCase := usecase.NewActivateUseCase(repo, jwtHelper, rabbitMQ)
 	signInUseCase := usecase.NewSignInUseCase(repo, redisRepo)
 	logoutUseCase := usecase.NewLogoutUseCase(redisRepo)
+	allLogoutUseCase := usecase.NewAllLogoutUseCase(redisRepo, userRedisRepo)
 	resetPasswordUseCase := usecase.NewResetPasswordUseCase(repo, redisRepo)
 
 	signUpAuthHandler := auth.NewSignUpAuthHandler(signUpUseCase)
@@ -23,6 +24,7 @@ func SetupHTTPHandlers(jwtHelper JwtHelper, repo Repository, redisRepo RedisRepo
 	activateAuthHandler := auth.NewActivateAuthHandler(activateUseCase)
 	signInAuthHandler := auth.NewSignInAuthHandler(signInUseCase)
 	logoutAuthHandler := auth.NewLogoutAuthHandler(logoutUseCase)
+	allLogoutAuthHandler := auth.NewAllLogoutAuthHandler(allLogoutUseCase)
 	resetPasswordAuthHandler := auth.NewResetPasswordAuthHandler(resetPasswordUseCase)
 
 	return map[string]interface{}{
@@ -32,5 +34,6 @@ func SetupHTTPHandlers(jwtHelper JwtHelper, repo Repository, redisRepo RedisRepo
 		"forgotpassword": forgotPasswordAuthHandler,
 		"resetpassword":  resetPasswordAuthHandler,
 		"logout":         logoutAuthHandler,
+		"alllogout":      allLogoutAuthHandler,
 	}
 }

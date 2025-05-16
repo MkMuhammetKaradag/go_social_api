@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 )
 
 type ForgotPasswordUseCase interface {
@@ -18,6 +19,9 @@ type ResetPasswordUseCase interface {
 	Execute(ctx context.Context, token, password string) error
 }
 type LogoutUseCase interface {
+	Execute(fbrCtx *fiber.Ctx, ctx context.Context) error
+}
+type AllLogoutUseCase interface {
 	Execute(fbrCtx *fiber.Ctx, ctx context.Context) error
 }
 type SignInUseCase interface {
@@ -51,4 +55,7 @@ type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)
 	DeleteSession(ctx context.Context, key string, userID string) error
 	DeleteAllUserSessions(ctx context.Context, userId string) error
+}
+type UserRedisRepository interface {
+	PublishUserLogout(ctx context.Context, userID uuid.UUID)
 }

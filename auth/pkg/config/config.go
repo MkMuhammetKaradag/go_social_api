@@ -37,6 +37,7 @@ type RedisConfig struct {
 	RedisURL string `mapstructure:"redisURL"`
 	Password string `mapstructure:"password"`
 	DB       int    `mapstructure:"db"`
+	UserDB   int    `mapstructure:"userdb"`
 }
 type JwtConfig struct {
 	Secret string `mapstructure:"secret"`

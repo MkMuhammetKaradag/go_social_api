@@ -22,8 +22,7 @@ func SetupServer(config config.Config, httpHandlers map[string]interface{}, repo
 
 	app := server.NewFiberApp(serverConfig)
 
-	// HTTP handler'ları al
-	// httpHandlers := SetupHTTPHandlers( repo, redisRepo, rabbitMQ) // Repo parametresi gerekiyorsa düzeltin
+
 
 	// Root endpoint
 	app.Get("/", func(c *fiber.Ctx) error {
