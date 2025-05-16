@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"context"
 	"socialmedia/shared/messaging"
 	grpcserver "socialmedia/user/internal/grpc"
 	"socialmedia/user/pkg/config"
@@ -44,7 +45,8 @@ func (a *App) initDependencies(grpcSrv *grpcserver.Server) {
 	a.redisRepo = InitRedis(a.config)
 
 	a.userRedisRepo = InitUserRedis(a.config)
-	a.myWS = InitWebsocket(a.userRedisRepo)
+	ctx := context.Background()
+	a.myWS = InitWebsocket(ctx, a.userRedisRepo)
 
 	// fmt.Printf("initDependencies: repo address: %p\n", a.repo)
 

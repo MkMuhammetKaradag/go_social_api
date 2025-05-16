@@ -14,8 +14,8 @@ type UserRedisRepository struct {
 	client *redis.Client
 }
 type UserLogoutNotification struct {
-	UserID    uuid.UUID
-	Timestamp int64
+	UserID    uuid.UUID `json:"user_id"`
+	Timestamp int64     `json:"timestamp"`
 }
 
 func NewUserRedisRepository(connString, password string, db int) (*UserRedisRepository, error) {

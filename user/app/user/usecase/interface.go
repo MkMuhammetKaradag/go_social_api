@@ -55,7 +55,7 @@ type RedisRepository interface {
 	GetSession(ctx context.Context, key string) (map[string]string, error)
 }
 type Hub interface {
-	Run()
+	Run(ctx context.Context)
 	RegisterClient(client *domain.Client)
 	UnregisterClient(client *domain.Client)
 }

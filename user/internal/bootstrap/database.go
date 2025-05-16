@@ -7,6 +7,7 @@ import (
 	"socialmedia/user/pkg/config"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 type Repository interface {
@@ -39,17 +40,18 @@ func InitRedis(config config.Config) RedisRepository {
 func InitUserRedis(config config.Config) UserRedisRepository {
 	return initializer.InitUserRedis(config)
 }
-func InitWebsocket(redisRepo UserRedisRepository) Hub {
-	return initializer.InitWebsocket(redisRepo)
+func InitWebsocket(ctx context.Context, redisRepo UserRedisRepository) Hub {
+	client := redisRepo.GetRedisClient()
+	return initializer.InitWebsocket(ctx, redisRepo, client)
 }
 
 type UserRedisRepository interface {
 	PublishUserStatus(ctx context.Context, userID uuid.UUID, status string)
-	
-	// GetRedisClient() *redis.Client
+
+	GetRedisClient() *redis.Client
 }
 type Hub interface {
-	Run()
+	Run(ctx context.Context)
 	RegisterClient(client *domain.Client)
 	UnregisterClient(client *domain.Client)
 }
