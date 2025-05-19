@@ -1,1 +1,0 @@
-{"id":"f085d092-1b41-4b8c-ad60-8d67de9e917b","type":"user_created","data":{"email":"test@mail.com","id":"c80e1f47-442d-4ead-903c-b4bc059d3b26","username":"test1"},"created":"2025-04-25T12:58:25.3439883+03:00","from_service":"auth","to_services":["user"],"retry_count":1,"priority":0,"headers":null,"critical":true}

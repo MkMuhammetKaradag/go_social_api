@@ -9,12 +9,6 @@ type SignUpAuthRequest struct {
 	Username string `json:"username" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8"`
-	// FirstName      string `json:"first_name"`
-	// LastName       string `json:"last_name"`
-	// Birthdate      string `json:"birthdate"`
-	// PhoneNumber    string `json:"phone_number"`
-	// ProfilePicture string `json:"profile_picture"`
-	// Bio            string `json:"bio"`
 }
 
 type SignUpAuthResponse struct {

@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"context"
-	"fmt"
+	// "fmt"
 	"socialmedia/chat/domain"
 	"socialmedia/shared/middlewares"
 
@@ -41,12 +41,12 @@ func (uc *deleteAllMessagesFromConversationUseCase) Execute(fbrCtx *fiber.Ctx, c
 		return err
 	}
 
-	a, err := uc.userClient.GetUserByID(ctx, "helloid")
+	// a, err := uc.userClient.GetUserByID(ctx, "helloid")
 
-	if err != nil {
-		fmt.Println("grpc error client usecase in ", err)
-	}
-	fmt.Println("grpc response :", a)
+	// if err != nil {
+	// 	fmt.Println("grpc error client usecase in ", err)
+	// }
+	// fmt.Println("grpc response :", a)
 
 	return nil
 }
